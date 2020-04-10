@@ -4,8 +4,7 @@ classdef server < handle
     
     properties
         port = [];
-        server_socket = [];
-        output_socket = [];
+        tcpHandle = [];
         log = [];
     end
 
@@ -18,21 +17,20 @@ classdef server < handle
 
         function serve(obj)
             obj.log.info('Serving...');
+						obj.tcpHandle = tcpip('0.0.0.0', obj.port, 'NetworkRole', 'server', 'InputBufferSize', 2^20, 'OutputBufferSize', 2^20);
             while true
                 try
-                    obj.server_socket = ServerSocket(obj.port);
                     obj.log.info('Waiting for client to connect to this host on port : %d', obj.port);
-                    [obj.output_socket,remote_socket_address] = SocketAccept(obj.server_socket);
-                    obj.log.info('Accepting connection from: %s', remote_socket_address);
+                    fopen(obj.tcpHandle);
+                    obj.log.info('Accepting connection from: %s:%d', obj.tcpHandle.RemoteHost, obj.tcpHandle.RemotePort);
                     handle(obj);
-                    SocketClose(obj.server_socket);
-                    SocketClose(obj.output_socket);
+                    flushoutput(obj.tcpHandle);
+                    fclose(obj.tcpHandle);
+                    obj.tcpHandle = [];
                 catch
-                    if ~isempty(obj.output_socket)
-                        SocketClose(obj.output_socket);
-                    end
-                    if ~isempty(obj.server_socket)
-                        SocketClose(obj.server_socket);
+                    if ~isempty(obj.tcpHandle)
+                        fclose(obj.tcpHandle);
+                        obj.tcpHandle = [];
                     end
                     pause(1);
                 end
@@ -41,7 +39,7 @@ classdef server < handle
 
         function handle(obj)
             try
-                conn = connection(obj.output_socket);
+                conn = connection(obj.tcpHandle);
                 config = next(conn);
                 parameters = next(conn);
                 image = simplefft.process(conn,config,parameters,obj.log);
@@ -51,7 +49,10 @@ classdef server < handle
                 obj.log.info('Sending done!\n');
             catch ME
                 if strcmp(ME.identifier,'Iterator:StopIteration')
-                    SocketClose(obj.output_socket);
+                    if ~isempty(obj.tcpHandle)
+                        fclose(obj.tcpHandle);
+                        obj.tcpHandle = [];
+                    end
                 else
                     obj.log.error(ME);
                     rethrow(ME);
@@ -60,8 +61,9 @@ classdef server < handle
         end
 
         function delete(obj)
-            if ~isempty(obj.server_socket)
-                SocketClose(obj.server_socket);
+            if ~isempty(obj.tcpHandle)
+                fclose(obj.tcpHandle);
+                obj.tcpHandle = [];
             end
         end
         

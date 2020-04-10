@@ -3,21 +3,25 @@ classdef connection < handle
     % Created by Alexander Fyrdahl <alexander.fyrdahl@gmail.com>
     
     properties
-        socket
+        tcpHandle
     end
 
     methods
-        function obj = connection(socket)
-            obj.socket = socket;
+        function obj = connection(tcpHandle)
+            obj.tcpHandle = tcpHandle;
         end
 
         function out = read(obj,length)
-            out = SocketRead(obj.socket,length);
+            if (length == 0)
+                out = [];
+                return
+            end
+            out = uint8(fread(obj.tcpHandle, double(length), 'uint8'));
             out = swapbytes(typecast(out,'uint8'));
         end
 
         function obj = write(obj,bytes)
-            SocketWrite(obj.socket,bytes);
+            fwrite(obj.tcpHandle, bytes, class(bytes));
         end
 
         function [out,obj] = next(obj)
@@ -119,7 +123,7 @@ classdef connection < handle
             write(obj,image.head_.toBytes());
             write(obj,typecast(uint64(length(image.attribute_string_)),'uint8'));
             write(obj,uint8(image.attribute_string_));
-            write(obj,uint16(image.data_));
+            write(obj,swapbytes(uint16(reshape(image.data_, [], 1))));
             write_gadget_message_close(obj);
         end
     end

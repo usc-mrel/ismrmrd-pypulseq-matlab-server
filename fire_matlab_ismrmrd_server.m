@@ -7,6 +7,7 @@ function fire_matlab_ismrmrd_server(varargin)
     if(isOctave)
         javaaddpath('/usr/share/java/xercesImpl.jar');
         javaaddpath('/usr/share/java/xml-apis.jar');
+        pkg load instrument-control
     end
 
     if nargin < 1
