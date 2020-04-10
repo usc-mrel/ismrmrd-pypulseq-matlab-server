@@ -333,7 +333,8 @@ classdef ImageHeader < handle
                 bytes(off:off+1,p)   = typecast(obj.image_series_index(p)      ,'uint8'); off=off+2;
                 bytes(off:off+31,p)  = typecast(obj.user_int(:,p)              ,'uint8'); off=off+32;
                 bytes(off:off+31,p)  = typecast(obj.user_float(:,p)            ,'uint8'); off=off+32;
-                
+                bytes(off:off+3,p)   = typecast(obj.attribute_string_len(p)    ,'uint8'); off=off+4;
+
             end
         end
         

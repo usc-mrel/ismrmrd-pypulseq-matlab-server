@@ -221,7 +221,7 @@ classdef Meta < handle
             end
 
             xmlstring = char(xmlwrite(docNode));
-            xmlstring(end+1) = char(0);
+            % xmlstring(end+1) = char(0);
         end
 
     end
