@@ -28,19 +28,19 @@ classdef connection < handle
             out = [];
             identifier = read_gadget_message_identifier(obj);
             switch identifier
-                case constants.GADGET_MESSAGE_CONFIG_FILE
+                case constants.MRD_MESSAGE_CONFIG_FILE
                     out = read_gadget_message_config_file(obj);
-                case constants.GADGET_MESSAGE_CONFIG_SCRIPT
+                case constants.MRD_MESSAGE_CONFIG_TEXT
                     out = self.read_gadget_message_config_script(obj);
-                case constants.GADGET_MESSAGE_PARAMETER_SCRIPT
+                case constants.MRD_MESSAGE_METADATA_XML_TEXT
                     out = read_gadget_message_parameter_script(obj);
-                case constants.GADGET_MESSAGE_CLOSE
+                case constants.MRD_MESSAGE_CLOSE
                     obj = read_gadget_message_close(obj);
-                case constants.GADGET_MESSAGE_ISMRMRD_ACQUISITION
+                case constants.MRD_MESSAGE_ISMRMRD_ACQUISITION
                     out = read_gadget_message_ismrmrd_acquisition(obj);
-                case constants.GADGET_MESSAGE_ISMRMRD_WAVEFORM
+                case constants.MRD_MESSAGE_ISMRMRD_WAVEFORM
                     out = read_gadget_message_ismrmrd_waveform(obj);
-                case constants.GADGET_MESSAGE_ISMRMRD_IMAGE
+                case constants.MRD_MESSAGE_ISMRMRD_IMAGE
                     out = read_gadget_message_ismrmrd_image(obj);
                 otherwise
                     unknown_message_identifier(identifier);
@@ -53,12 +53,12 @@ classdef connection < handle
         end
 
         function identifier = read_gadget_message_identifier(obj)
-            identifier_bytes = read(obj,constants.SIZEOF_GADGET_MESSAGE_IDENTIFIER);
+            identifier_bytes = read(obj,constants.SIZEOF_MRD_MESSAGE_IDENTIFIER);
             identifier = typecast(identifier_bytes,'uint16');
         end
 
         function length = read_gadget_message_length(obj)
-            length_bytes = read(obj,constants.SIZEOF_GADGET_MESSAGE_LENGTH);
+            length_bytes = read(obj,constants.SIZEOF_MRD_MESSAGE_LENGTH);
             length = typecast(length_bytes,'uint32');
         end
 
@@ -68,7 +68,7 @@ classdef connection < handle
         end
 
         function config_file = read_gadget_message_config_file(obj)
-            config_file_bytes = read(obj,constants.SIZEOF_GADGET_MESSAGE_CONFIGURATION_FILE);
+            config_file_bytes = read(obj,constants.SIZEOF_MRD_MESSAGE_CONFIGURATION_FILE);
             config_file = strtok(char(config_file_bytes)',char(0));
         end
 
@@ -82,7 +82,7 @@ classdef connection < handle
         end
 
         function out = read_gadget_message_ismrmrd_acquisition(obj)
-            header_bytes = read(obj,constants.SIZEOF_GADGET_ACQUISITION_HEADER);
+            header_bytes = read(obj,constants.SIZEOF_MRD_ACQUISITION_HEADER);
             header = ismrmrd.AcquisitionHeader(header_bytes);
 
             dims = [header.number_of_samples, header.active_channels];
@@ -113,12 +113,12 @@ classdef connection < handle
         end
 
         function obj = write_gadget_message_close(obj)
-            msg = typecast(uint16(constants.GADGET_MESSAGE_CLOSE),'uint8');
+            msg = typecast(uint16(constants.MRD_MESSAGE_CLOSE),'uint8');
             write(obj,msg);
         end
 
         function obj = send_image(obj,image)
-            ID = typecast(uint16(constants.GADGET_MESSAGE_ISMRMRD_IMAGE),'uint8');
+            ID = typecast(uint16(constants.MRD_MESSAGE_ISMRMRD_IMAGE),'uint8');
             write(obj,ID);
             write(obj,image.head_.toBytes());
             write(obj,typecast(uint64(length(image.attribute_string_)),'uint8'));
