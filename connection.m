@@ -118,7 +118,7 @@ classdef connection < handle
             write(obj,ID);
             write(obj,image.head_.toBytes());
             write(obj,typecast(uint64(length(image.attribute_string_)),'uint8'));
-            write(obj,char(image.attribute_string_));
+            write(obj,uint8(image.attribute_string_));
             write(obj,uint16(image.data_));
             write_gadget_message_close(obj);
         end
