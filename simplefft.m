@@ -4,40 +4,38 @@ classdef simplefft < handle
     
     methods (Static)
 
-        function image = process(conn,config,header,log)
-
+        function image = process(conn,config,metadata,log)
            log.info('Reconstructing %s\n',config);
 
-					 log.info('Header is %s\n',header);
-					 try
-	           hdr = ismrmrd.xml.deserialize(header);
-					 catch
-						 disp("Error deserializing XML header");
-					 end
-           encoding_x = hdr.encoding.encodedSpace.matrixSize.x;
-           encoding_y = hdr.encoding.encodedSpace.matrixSize.y;
-           recon_x = hdr.encoding.reconSpace.matrixSize.x;
-           recon_y = hdr.encoding.reconSpace.matrixSize.y;
-           num_coils = hdr.acquisitionSystemInformation.receiverChannels;
+            try
+                log.info('Metadata is %s\n', ismrmrd.xml.serialize(metadata));
+                encoding_x = metadata.encoding.encodedSpace.matrixSize.x;
+                encoding_y = metadata.encoding.encodedSpace.matrixSize.y;
+                recon_x    = metadata.encoding.reconSpace.matrixSize.x;
+                recon_y    = metadata.encoding.reconSpace.matrixSize.y;
+                num_coils  = metadata.acquisitionSystemInformation.receiverChannels;
+            catch
+                disp("Error deserializing XML header");
+            end
 
-						group = ismrmrd.Acquisition;
-						while true
-							meas = next(conn);
-							if isa(meas, 'ismrmrd.Acquisition')
+            group = ismrmrd.Acquisition;
+            while true
+                meas = next(conn);
+                if isa(meas, 'ismrmrd.Acquisition')
 
-								% Ignore non-imaging data
-								if ~(meas.head.flagIsSet(meas.head.FLAGS.ACQ_IS_NOISE_MEASUREMENT) || ...
-								     meas.head.flagIsSet(meas.head.FLAGS.ACQ_IS_PHASECORR_DATA))
-									append(group, meas.head, meas.traj{:}, meas.data{:});
-								end
+                    % Ignore non-imaging data
+                    if ~(meas.head.flagIsSet(meas.head.FLAGS.ACQ_IS_NOISE_MEASUREMENT) || ...
+                            meas.head.flagIsSet(meas.head.FLAGS.ACQ_IS_PHASECORR_DATA))
+                        append(group, meas.head, meas.traj{:}, meas.data{:});
+                    end
 
-								if meas.head.flagIsSet(meas.head.FLAGS.ACQ_LAST_IN_SLICE)
-									break
-								end
-							else
-								break
-							end
-						end
+                    if meas.head.flagIsSet(meas.head.FLAGS.ACQ_LAST_IN_SLICE)
+                        break
+                    end
+                else
+                    break
+                end
+            end
 
            ksp = reshape([group.data{:}],encoding_x,num_coils,encoding_y);
            ksp = permute(ksp,[1 3 2]);
@@ -67,10 +65,12 @@ classdef simplefft < handle
            meta.WindowCenter = 16384;
            meta.WindowWidth = 32768;
            image.attribute_string_ = serialize(meta);
-					 image.head_.attribute_string_len = uint32(length(image.attribute_string_));
+           image.head_.attribute_string_len = uint32(length(image.attribute_string_));
 
            image.data_ = im;
 
+           conn.send_image(image);
+           conn.send_close();
         end
     end
 end
