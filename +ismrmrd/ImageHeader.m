@@ -62,6 +62,46 @@ classdef ImageHeader < handle
 
     end
     
+    methods (Static)
+        % Convert data_type enum into readable name
+        function dtype = getMrdDatatypeName(data_type)
+            dtype = '';
+            names = fieldnames(ismrmrd.ImageHeader.DATA_TYPE);
+            for i = 1:numel(names)
+                if (ismrmrd.ImageHeader.DATA_TYPE.(names{i}) == data_type)
+                    dtype = names{i};
+                    return
+                end
+            end
+            error('Unrecognized data type %s', data_type)
+        end
+
+        % Get size of datatype in bytes
+        function bytes = getDatatypeSize(data_type)
+            bytes = 0;
+            switch (ismrmrd.ImageHeader.getMrdDatatypeName(data_type))
+                case 'USHORT'
+                    bytes = 2;
+                case 'SHORT'
+                    bytes = 2;
+                case 'UINT'
+                    bytes = 4;
+                case 'INT'
+                    bytes = 4;
+                case 'FLOAT'
+                    bytes = 4;
+                case 'DOUBLE'
+                    bytes = 8;
+                case 'CXFLOAT'
+                    bytes = 8;
+                case 'CXDOUBLE'
+                    bytes = 16;
+                otherwise
+                    error('Unrecognized data type %s', ismrmrd.ImageHeader.getMrdDatatypeName(data_type))
+            end
+        end
+    end
+
     methods
         
         function obj = ImageHeader(arg)
@@ -92,7 +132,7 @@ classdef ImageHeader < handle
                     
             end
         end
-        
+
         function nacq = getNumber(obj)
             nacq = length(obj.version);
         end
