@@ -1,11 +1,9 @@
 classdef server < handle
-    
-    % Created by Alexander Fyrdahl <alexander.fyrdahl@gmail.com>
-    
+
     properties
-        port = [];
+        port      = [];
         tcpHandle = [];
-        log = [];
+        log       = [];
     end
 
     methods
@@ -40,7 +38,6 @@ classdef server < handle
             try
                 conn = connection(obj.tcpHandle, obj.log);
                 config = next(conn);
-                image = simplefft.process(conn,config,parameters,obj.log);
                 metadata = next(conn);
 
                 try
@@ -51,6 +48,24 @@ classdef server < handle
                 catch
                     obj.log.info("Metadata is not a valid MRD XML structure.  Passing on metadata as text")
                 end
+
+                % Decide what program to use based on config
+                % As a shortcut, we accept the file name as text too.
+                if strcmpi(config, "simplefft")
+                    obj.log.info("Starting simplefft processing based on config")
+                    recon = simplefft;
+                if strcmpi(config, "invertcontrast")
+                    obj.log.info("Starting invertcontrast processing based on config")
+                    recon = invertcontrast;
+                elseif strcmpi(config, "mapvbvd")
+                    obj.log.info("Starting mapvbvd processing based on config")
+                    recon = fire_mapVBVD;
+                else
+                    obj.log.info("Unknown config '%s'.  Falling back to 'invertcontrast'", config)
+                    recon = invertcontrast;
+                end
+                recon.process(conn, config, metadata, obj.log);
+
             catch ME
                     obj.log.error('[%s:%d] %s', ME.stack(2).name, ME.stack(2).line, ME.message);
                     rethrow(ME);
