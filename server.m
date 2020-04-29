@@ -54,7 +54,7 @@ classdef server < handle
                 if strcmpi(config, "simplefft")
                     obj.log.info("Starting simplefft processing based on config")
                     recon = simplefft;
-                if strcmpi(config, "invertcontrast")
+								elseif strcmpi(config, "invertcontrast")
                     obj.log.info("Starting invertcontrast processing based on config")
                     recon = invertcontrast;
                 elseif strcmpi(config, "mapvbvd")
