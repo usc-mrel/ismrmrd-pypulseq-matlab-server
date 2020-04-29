@@ -102,6 +102,9 @@ classdef AcquisitionHeader < handle
                     elseif isa(arg,'uint8')
                         % Byte array
                         fromBytes(obj,arg);
+                    elseif isa(arg,'ismrmrd.AcquisitionHeader')
+                        % AcquistionHeader
+                        obj = arg;
                     else
                         % Unknown type
                         error('Unknown argument type.')
