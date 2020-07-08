@@ -17,7 +17,7 @@ function fire_matlab_ismrmrd_server(varargin)
     end
     
     if nargin < 2
-        logfile = 'fire.log'; 
+        logfile = '';
     else
         logfile = varargin{2};
     end

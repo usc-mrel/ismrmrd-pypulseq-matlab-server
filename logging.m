@@ -9,10 +9,6 @@ classdef logging < handle
     
     methods (Static)
         function obj = createLog(filename)
-            if nargin < 1
-                filename = 'fire.log';
-            end
-            
             persistent thisObj;
             if isempty(thisObj) || ~isvalid(thisObj)
                 thisObj = logging(filename);
@@ -57,9 +53,9 @@ classdef logging < handle
                 case 1
                     levelStr = 'DEBUG';
                 case 2
-                    levelStr = 'INFO';
+                    levelStr = 'INFO ';
                 case 3
-                    levelStr = 'WARN';
+                    levelStr = 'WARN ';
                 case 4
                     levelStr = 'ERROR';
                 otherwise
@@ -67,12 +63,14 @@ classdef logging < handle
             end
             
             % Write to log file,
-            fid = fopen(self.filename, 'a', 'n', 'utf-8');
-            fprintf(fid,'%s %s - %s\n' ...
-                , datestr(now,'yyyy-mm-dd HH:MM:SS,FFF') ...
-                , levelStr ...
-                , message);
-            fclose(fid);
+            if ~isempty(self.filename)
+                fid = fopen(self.filename, 'a', 'n', 'utf-8');
+                fprintf(fid,'%s %s - %s\n' ...
+                        , datestr(now,'yyyy-mm-dd HH:MM:SS,FFF') ...
+                        , levelStr ...
+                        , message);
+                fclose(fid);
+            end
             
             % but output to terminal as well
             fprintf('%s %s - %s\n' ...
