@@ -205,7 +205,7 @@ classdef connection < handle
         end
 
         function out = read_acquisition(obj)
-% 			obj.log.info("--> Received MRD_MESSAGE_ISMRMRD_ACQUISITION (1008)")
+            % obj.log.info("--> Received MRD_MESSAGE_ISMRMRD_ACQUISITION (1008)")
             header_bytes = read(obj,constants.SIZEOF_MRD_ACQUISITION_HEADER);
             header = ismrmrd.AcquisitionHeader(header_bytes);
 
@@ -238,14 +238,19 @@ classdef connection < handle
         %   Image data       (  variable, variable      )
         % ----------------------------------------------------------------------
         function obj = send_image(obj,image)
-            obj.log.info("--> Sending MRD_MESSAGE_ISMRMRD_IMAGE (1022)")
-            ID = typecast(uint16(constants.MRD_MESSAGE_ISMRMRD_IMAGE),'uint8');
-            write(obj,ID);
-            write(obj,image.head_.toBytes());
-            write(obj,typecast(uint64(length(image.attribute_string_)),'uint8'));
-            write(obj,uint8(image.attribute_string_));
-            write(obj,swapbytes(uint16(reshape(image.data_, [], 1))));
-            % write_gadget_message_close(obj);
+            if ~iscell(image)
+                image = {image};
+            end
+            obj.log.info("--> Sending MRD_MESSAGE_ISMRMRD_IMAGE (1022) (%d images)", numel(image))
+
+            for iImg = 1:numel(image)
+                ID = typecast(uint16(constants.MRD_MESSAGE_ISMRMRD_IMAGE),'uint8');
+                write(obj, ID);
+                write(obj, image{iImg}.head_.toBytes());
+                write(obj, typecast(uint64(length(image{iImg}.attribute_string_)),'uint8'));
+                write(obj, uint8(image{iImg}.attribute_string_));
+                write(obj, typecast(reshape(image{iImg}.data_,[],1), 'uint8'));
+            end
         end
 
         function image = read_image(obj)
