@@ -37,6 +37,9 @@ classdef WaveformHeader < handle
                     elseif isa(arg,'uint8')
                         % Byte array
                         fromBytes(obj,arg);
+                    elseif isa(arg,'ismrmrd.WaveformHeader')
+                        % WaveformHeader
+                        obj = arg;
                     else
                         % Unknown type
                         error('Unknown argument type.')
@@ -97,16 +100,15 @@ classdef WaveformHeader < handle
             Nstart = obj.getNumber + 1;
             Nend   = obj.getNumber + length(head.version);
             Nrange = Nstart:Nend;
-            obj.version(1,Nrange) = hdr.version(:);
-            obj.flags(1,Nrange) = hdr.flags(:);
-            obj.measurement_uid(1,Nrange) = hdr.measurement_uid(:);
-            obj.scan_counter(1,Nrange) = hdr.scan_counter(:);
-            obj.time_stamp(1,Nrange) = hdr.time_stamp(:);
-            obj.number_of_samples(1,Nrange) = hdr.number_of_samples(:);
-            obj.channels(1,Nrange) = hdr.channels(:);
-            obj.sample_time_us(1,Nrange) = hdr.sample_time_us(:);
-            obj.waveform_id(1,Nrange) = hdr.waveform_id(:);
-                    
+            obj.version(          1, Nrange) = head.version(:);
+            obj.flags(            1, Nrange) = head.flags(:);
+            obj.measurement_uid(  1, Nrange) = head.measurement_uid(:);
+            obj.scan_counter(     1, Nrange) = head.scan_counter(:);
+            obj.time_stamp(       1, Nrange) = head.time_stamp(:);
+            obj.number_of_samples(1, Nrange) = head.number_of_samples(:);
+            obj.channels(         1, Nrange) = head.channels(:);
+            obj.sample_time_us(   1, Nrange) = head.sample_time_us(:);
+            obj.waveform_id(      1, Nrange) = head.waveform_id(:);
         end
 
         function fromStruct(obj, hdr)
@@ -145,7 +147,7 @@ classdef WaveformHeader < handle
             % Convert from a byte array to an ISMRMRD AcquisitionHeader
             % This conforms to the memory layout of the C-struct
 
-            if size(bytearray,1) ~= 38 
+            if size(bytearray,1) ~= 40
                 error('Wrong number of bytes for AcquisitionHeader.')
             end
             N = size(bytearray,2);
@@ -154,12 +156,12 @@ classdef WaveformHeader < handle
             obj.flags =                    reshape(typecast(reshape(bytearray(  9:  16, :), 1, 8 *      N), 'uint64'),  1, N);  % bit field with flags %
             obj.measurement_uid =          reshape(typecast(reshape(bytearray(  17: 20, :), 1, 4 *      N), 'uint32'),  1, N);  % Unique ID for the measurement %
             obj.scan_counter =             reshape(typecast(reshape(bytearray(  21: 24, :), 1, 4 *      N), 'uint32'),  1, N);  % Current acquisition number in the measurement %
-            obj.acquisition_time_stamp =   reshape(typecast(reshape(bytearray(  25: 28, :), 1, 4 *      N), 'uint32'),  1, N);  % Acquisition clock %
+            obj.time_stamp             =   reshape(typecast(reshape(bytearray(  25: 28, :), 1, 4 *      N), 'uint32'),  1, N);  % Acquisition clock %
             obj.number_of_samples =        reshape(typecast(reshape(bytearray(  29: 30, :), 1, 2 *      N), 'uint16'),  1, N);  % Number of samples acquired %
-            obj.channels =                 reshape(typecast(reshape(bytearray(  31 : 32, :), 1, 2 *      N), 'uint16'),  1, N);  % Available channels%
-            obj.sample_time_us =           reshape(typecast(reshape(bytearray(  33: 36, :), 1, 2 *      N), 'single'),  1, N);  % Sample time in micro seconds %
+            obj.channels =                 reshape(typecast(reshape(bytearray(  31: 32, :), 1, 2 *      N), 'uint16'),  1, N);  % Available channels%
+            obj.sample_time_us =           reshape(typecast(reshape(bytearray(  33: 36, :), 1, 4 *      N), 'single'),  1, N);  % Sample time in micro seconds %
             obj.waveform_id =              reshape(typecast(reshape(bytearray(  37: 38, :), 1, 2 *      N), 'uint16'),  1, N);  % Waveform ID %
-
+            % 2 bytes of additional padding after waveform_id
 
         end
         
@@ -168,7 +170,7 @@ classdef WaveformHeader < handle
             % This conforms to the memory layout of the C-struct
 
             N = obj.getNumber;
-            bytes = zeros(38,N,'uint8');
+            bytes = zeros(40,N,'uint8');
             for p = 1:N
                 off = 1;
                 bytes(off:off+1,p)   = typecast(obj.version(p)               ,'uint8'); off=off+8;
@@ -180,6 +182,7 @@ classdef WaveformHeader < handle
                 bytes(off:off+1,p)   = typecast(obj.channels(p)              ,'uint8'); off=off+2;
                 bytes(off:off+3,p)   = typecast(obj.sample_time_us(p)        ,'uint8'); off=off+4;
                 bytes(off:off+1,p)   = typecast(obj.waveform_id(p)           ,'uint8'); off=off+2;
+                % 2 bytes of additional padding after waveform_id
             end
         end
         

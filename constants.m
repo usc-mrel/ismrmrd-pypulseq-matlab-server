@@ -39,7 +39,7 @@ classdef constants
         SIZEOF_MRD_MESSAGE_CONFIGURATION_FILE              = 1024; % char array
         SIZEOF_MRD_MESSAGE_ATTRIB_LENGTH                   =    8; % unsigned long long
         SIZEOF_MRD_ACQUISITION_HEADER                      =  340; % mixed
-        SIZEOF_MRD_WAVEFORM_HEADER                         =  240; % mixed
+        SIZEOF_MRD_WAVEFORM_HEADER                         =   40; % mixed
         SIZEOF_MRD_IMAGE_HEADER                            =  198; % mixed
     end
 end

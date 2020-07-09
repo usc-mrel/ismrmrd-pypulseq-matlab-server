@@ -37,7 +37,9 @@ classdef Waveform < handle
                     if isempty(data)
                         obj.data{M} = [];
                     else
-                        
+                        if ~iscell(data)
+                            data = {data};
+                        end
                         obj.dataFromInt(data);
                     end
                     
@@ -63,12 +65,12 @@ classdef Waveform < handle
             end    
         end
         
-        function append(obj, head, traj, data)
+        function append(obj, head, data)
             Nstart = obj.getNumber + 1;
             Nend   = obj.getNumber + length(head.version);
             Nrange = Nstart:Nend;
             obj.head.append(head);
-            if isempty(data) > 0
+            if ~isempty(data)
                 obj.data{Nrange} = data;
             end
             
@@ -95,7 +97,7 @@ classdef Waveform < handle
                 dims = [ obj.head.number_of_samples(p),...
                         obj.head.channels(p)
                        ];
-                buff = v{p};
+                buff = typecast(v{p}, 'uint32');
                 obj.data{p} = reshape(buff, dims);
             end
         end

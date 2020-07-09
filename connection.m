@@ -27,7 +27,6 @@ classdef connection < handle
         end
 
         function [out,obj] = next(obj)
-            out = [];
             identifier = read_mrd_message_identifier(obj);
             switch identifier
                 case constants.MRD_MESSAGE_CONFIG_FILE
@@ -49,7 +48,7 @@ classdef connection < handle
             end
         end
 
-        function unknown_message_identifier(identifier)
+        function out = unknown_message_identifier(identifier)
             obj.log.error("Received unknown message type: %d", double(identifier));
             out = [];
         end
@@ -282,11 +281,35 @@ classdef connection < handle
         % This message contains abitrary (e.g. physio) waveform data.
         % Message consists of:
         %   ID               (   2 bytes, unsigned short)
-        %   Fixed header     ( 240 bytes, mixed         )
+        %   Fixed header     (  40 bytes, mixed         )
         %   Waveform data    (  variable, uint32_t      )
         % ----------------------------------------------------------------------
-        function out = read_waveform(obj)
-            % TODO
+        function obj = send_waveform(obj, waveform)
+            obj.log.info("--> Sending MRD_MESSAGE_ISMRMRD_WAVEFORM (1026) (%d waveforms)", numel(waveform.head.version))
+
+            headBytes = waveform.head.toBytes();
+            for iWav = 1:numel(waveform.head.version)
+                ID = typecast(uint16(constants.MRD_MESSAGE_ISMRMRD_WAVEFORM),'uint8');
+                write(obj, ID);
+                write(obj, headBytes(:,iWav));
+                write(obj, typecast(reshape(waveform.data{iWav},[],1), 'uint8'));
+            end
+        end
+
+        function waveform = read_waveform(obj)
+            % obj.log.info("<-- Received MRD_MESSAGE_ISMRMRD_WAVEFORM (1026)")
+
+            % obj.log.debug("   Reading in %d bytes of waveform header", constants.SIZEOF_MRD_WAVEFORM_HEADER)
+            header_bytes = read(obj,constants.SIZEOF_MRD_WAVEFORM_HEADER);
+            header = ismrmrd.WaveformHeader(uint8(header_bytes));
+    
+            % obj.log.debug("   Waveform is %d samples with %d channels", header.number_of_samples, header.channels)
+            nbytes = header.number_of_samples * header.channels * 4; % 4 bytes for each uint32
+
+            % obj.log.debug("   Reading in %d bytes of waveform data", nbytes)
+            data_bytes = read(obj, nbytes);
+
+            waveform = ismrmrd.Waveform(header, data_bytes);
         end
 
     end

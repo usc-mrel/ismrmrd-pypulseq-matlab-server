@@ -23,6 +23,7 @@ classdef fire_mapVBVD < handle
             % Continuously parse incoming data parsed from MRD messages
             acqGroup = []; %ismrmrd.Acquisition;
             imgGroup = []; %ismrmrd.Image;
+            wavGroup = []; %ismrmrd.Waveform;
             try
                 while true
                     item = next(connection);
@@ -73,6 +74,16 @@ classdef fire_mapVBVD < handle
                             imgGroup = [];
                         end
 
+                    % ----------------------------------------------------------
+                    % Waveform data messages
+                    % ----------------------------------------------------------
+                    elseif isa(item, 'ismrmrd.Waveform')
+                        if isempty(wavGroup)
+                            wavGroup = item;
+                        else
+                            append(wavGroup, item.head, item.data{:});
+                        end
+
                     elseif isempty(item)
                         break;
 
@@ -80,6 +91,18 @@ classdef fire_mapVBVD < handle
                         logging.error("Unhandled data type: %s", class(item))
                     end
                 end
+            end
+
+            % Extract raw ECG waveform data. Basic sorting to make sure that data 
+            % is time-ordered, but no additional checking for missing data.
+            % ecgData has shape (5 x timepoints)
+            if ~isempty(wavGroup)
+                indsEcg = (wavGroup.head.waveform_id == 0);
+                ecgTime = wavGroup.head.time_stamp(indsEcg);
+                ecgData = wavGroup.data(indsEcg);
+
+                [~, sortedInds] = sort(ecgTime);
+                ecgData = cat(1, ecgData{sortedInds});
             end
 
             % Process any remaining groups of raw or image data.  This can 
