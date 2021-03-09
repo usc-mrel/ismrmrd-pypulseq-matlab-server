@@ -208,23 +208,13 @@ classdef connection < handle
             header_bytes = read(obj,constants.SIZEOF_MRD_ACQUISITION_HEADER);
             header = ismrmrd.AcquisitionHeader(header_bytes);
 
-            dims = [header.number_of_samples, header.active_channels];
             trajectory_bytes = read(obj, header.number_of_samples * header.trajectory_dimensions * 4);
             traj = typecast(trajectory_bytes','single');
 
             data_bytes = read(obj, uint64(header.number_of_samples) * uint64(header.active_channels) * 8);
             data = typecast(data_bytes,'single');
 
-            out = ismrmrd.Acquisition();
-            out.head = header;
-
-            if ~isempty(traj)
-                out.traj{:} = reshape(traj, dims);
-            end
-
-            if ~isempty(data)
-                out.data{:} = reshape(data(1:2:end) + 1j*data(2:2:end), dims);
-            end
+            out = ismrmrd.Acquisition(header, traj, {data});
         end
 
         % ----- MRD_MESSAGE_ISMRMRD_IMAGE (1022) -------------------------------
