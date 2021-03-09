@@ -33,8 +33,9 @@ classdef fire_mapVBVD < handle
                     % ----------------------------------------------------------
                     if isa(item, 'ismrmrd.Acquisition')
                         % Accumulate all imaging readouts in a group
-                        if (~item.head.flagIsSet(item.head.FLAGS.ACQ_IS_NOISE_MEASUREMENT) && ...
-                            ~item.head.flagIsSet(item.head.FLAGS.ACQ_IS_PHASECORR_DATA))
+                        if (~item.head.flagIsSet(item.head.FLAGS.ACQ_IS_NOISE_MEASUREMENT)    && ...
+                            ~item.head.flagIsSet(item.head.FLAGS.ACQ_IS_PHASECORR_DATA)       && ...
+                            ~item.head.flagIsSet(item.head.FLAGS.ACQ_IS_PARALLEL_CALIBRATION)       )
 
                             if isempty(acqGroup)
                                 acqGroup = ismrmrd.Acquisition(item.head, item.traj, item.data);
@@ -129,6 +130,7 @@ classdef fire_mapVBVD < handle
             return
         end
 
+        % Process a set of raw k-space data and return an image
         function image = process_raw(obj, group, config, metadata, logging)
             
             % This is almost like the twix_obj
@@ -136,12 +138,15 @@ classdef fire_mapVBVD < handle
             twix_obj.setMrdAcq(group);
 
             ksp = twix_obj.imageData();			
-            logging.info("Data is 'mapVBVD formatted' with dimensions:")
-            logging.info(sprintf('%s ', twix_obj.dataDims{1:10}))
-            logging.info(sprintf('%3d ', size(ksp)))
+            logging.info("Data is 'mapVBVD formatted' with dimensions:")  % Data is 'mapVBVD formatted' with dimensions:
+            logging.info(sprintf('%s ', twix_obj.dataDims{1:11}))         % Col Cha Lin Par Sli Ave Phs Eco Rep Set Seg
+            logging.info(sprintf('%3d ', size(ksp)))                      % 352  30 189   1   1   1  27   1   1   1   9 
 
             % Extract only the first slice/average/phs, etc.
-            ksp = ksp(:,:,:,1,1,1,1,1,1,1,1,1,1,1,1,1);			
+            ksp = ksp(:,:,:,1,1,1,1,1,1,1,:,1,1,1,1,1);
+
+            % Sum over segments
+            ksp = sum(ksp,11);
 
             % Format data into a single [RO PE cha] array
             ksp = permute(ksp, [1 3 2]);
@@ -175,6 +180,7 @@ classdef fire_mapVBVD < handle
             image.head_.channels       = uint16(1);
             image.head_.data_type      = uint16(ismrmrd.ImageHeader.DATA_TYPE.SHORT);
             image.head_.image_index    = uint16(1);  % This field is mandatory
+            image.head_.field_of_view  = single([metadata.encoding(1).reconSpace.fieldOfView_mm.x metadata.encoding(1).reconSpace.fieldOfView_mm.y metadata.encoding(1).reconSpace.fieldOfView_mm.z]'); % Also mandatory to be non-zero
 
             % Set ISMRMRD Meta Attributes
             meta = ismrmrd.Meta();
