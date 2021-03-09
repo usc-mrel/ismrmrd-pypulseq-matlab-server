@@ -137,7 +137,7 @@ classdef fire_mapVBVD < handle
             twix_obj = twix_map_obj_fire;
             twix_obj.setMrdAcq(group);
 
-            ksp = twix_obj.imageData();			
+            ksp = twix_obj.imageData();
             logging.info("Data is 'mapVBVD formatted' with dimensions:")  % Data is 'mapVBVD formatted' with dimensions:
             logging.info(sprintf('%s ', twix_obj.dataDims{1:11}))         % Col Cha Lin Par Sli Ave Phs Eco Rep Set Seg
             logging.info(sprintf('%3d ', size(ksp)))                      % 352  30 189   1   1   1  27   1   1   1   9 
@@ -150,6 +150,9 @@ classdef fire_mapVBVD < handle
 
             % Format data into a single [RO PE cha] array
             ksp = permute(ksp, [1 3 2]);
+
+            % Pad array to match intended recon space (properly account for phase resolution, partial Fourier, asymmetric echo, etc. later)
+            ksp(metadata.encoding.reconSpace.matrixSize.x*2, metadata.encoding.reconSpace.matrixSize.y,:) = 0;
 
             % Fourier Transform
             img = fftshift(fft2(ifftshift(ksp)));
