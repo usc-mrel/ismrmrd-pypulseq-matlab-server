@@ -617,7 +617,7 @@ classdef AcquisitionHeader < handle
             else
                 error('Flag is of the wrong type.'); 
             end
-            bitmask = bitshift(uint64(1),(b-1));
+            bitmask = bitshift(uint64(1),(b-uint64(1)));
 
             alreadyset = obj.flagIsSet(flag,range);
             for p = 1:length(range)

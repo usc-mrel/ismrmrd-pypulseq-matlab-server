@@ -5,7 +5,7 @@ classdef Image
     properties
 
         head_ = ismrmrd.ImageHeader;
-        data_ = [];
+        data_;
         attribute_string_ = [];
 
     end % Properties
@@ -18,7 +18,7 @@ classdef Image
         end
 
         function obj = set.data_(obj,v)
-            obj.data_ = single(complex(v));
+            obj.data_ = v; %single(complex(v));
         end
 
         function b = isFlagSet(obj,flag)
