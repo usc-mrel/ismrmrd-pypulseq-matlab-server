@@ -14,7 +14,6 @@ classdef server < handle
         end
 
         function serve(obj)
-            obj.log.info('Serving...');
             while true
                 try
                     obj.tcpHandle = tcpip('0.0.0.0',          obj.port, ...
@@ -29,12 +28,15 @@ classdef server < handle
                     flushoutput(obj.tcpHandle);
                     fclose(obj.tcpHandle);
                     obj.tcpHandle = [];
-                catch
+                catch ME
                     if ~isempty(obj.tcpHandle)
                         fclose(obj.tcpHandle);
                         obj.tcpHandle = [];
                     end
+
+                    obj.log.error(sprintf('%s\nError in %s (%s) (line %d)', ME.message, ME.stack(1).('name'), ME.stack(1).('file'), ME.stack(1).('line')));
                 end
+                pause(1)
             end
         end
 
@@ -58,7 +60,7 @@ classdef server < handle
                 if strcmpi(config, "simplefft")
                     obj.log.info("Starting simplefft processing based on config")
                     recon = simplefft;
-								elseif strcmpi(config, "invertcontrast")
+                elseif strcmpi(config, "invertcontrast")
                     obj.log.info("Starting invertcontrast processing based on config")
                     recon = invertcontrast;
                 elseif strcmpi(config, "mapvbvd")
@@ -71,10 +73,10 @@ classdef server < handle
                 recon.process(conn, config, metadata, obj.log);
 
             catch ME
-                    obj.log.error('[%s:%d] %s', ME.stack(2).name, ME.stack(2).line, ME.message);
-                    rethrow(ME);
-                end
+                obj.log.error('[%s:%d] %s', ME.stack(2).name, ME.stack(2).line, ME.message);
+                rethrow(ME);
             end
+        end
 
         function delete(obj)
             if ~isempty(obj.tcpHandle)
@@ -82,7 +84,7 @@ classdef server < handle
                 obj.tcpHandle = [];
             end
         end
-        
+
     end
-    
+
 end

@@ -80,6 +80,8 @@ classdef invertcontrast < handle
                         logging.error("Unhandled data type: %s", class(item))
                     end
                 end
+            catch ME
+                logging.error(sprintf('%s\nError in %s (%s) (line %d)', ME.message, ME.stack(1).('name'), ME.stack(1).('file'), ME.stack(1).('line')));
             end
 
             % Process any remaining groups of raw or image data.  This can 

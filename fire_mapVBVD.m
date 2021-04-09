@@ -92,6 +92,8 @@ classdef fire_mapVBVD < handle
                         logging.error("Unhandled data type: %s", class(item))
                     end
                 end
+            catch ME
+                logging.error(sprintf('%s\nError in %s (%s) (line %d)', ME.message, ME.stack(1).('name'), ME.stack(1).('file'), ME.stack(1).('line')));
             end
 
             % Extract raw ECG waveform data. Basic sorting to make sure that data 
