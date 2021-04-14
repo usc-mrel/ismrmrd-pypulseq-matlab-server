@@ -69,8 +69,13 @@ classdef server < handle
                     obj.log.info("Starting mapvbvd processing based on config")
                     recon = fire_mapVBVD;
                 else
-                    obj.log.info("Unknown config '%s'.  Falling back to 'invertcontrast'", config)
-                    recon = invertcontrast;
+                    if exist(config, 'class')
+                        obj.log.info("Starting %s processing based on config", config)
+                        eval(['recon = ' config ';'])
+                    else
+                        obj.log.info("Unknown config '%s'.  Falling back to 'invertcontrast'", config)
+                        recon = invertcontrast;
+                    end
                 end
                 recon.process(conn, config, metadata, obj.log);
 
