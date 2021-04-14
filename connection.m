@@ -193,14 +193,14 @@ classdef connection < handle
             obj.log.info("--> Sending MRD_MESSAGE_ISMRMRD_ACQUISITION (1008)")
 
             ID  = typecast(uint16(constants.MRD_MESSAGE_ISMRMRD_ACQUISITION), 'uint8');
-            header_bytes = acq.head.toBytes();
-            traj_float = acq.trajToFloat();
-            data_float = acq.dataToFloat();
+            header_bytes = acq.head.serialize();
+            traj_bytes   = acq.traj;
+            data_bytes   = acq.serializeData(); % Convert from complex to real/imag single pairs
 
             write(obj, ID);
             write(obj, header_bytes);
-            write(obj, typecast(traj_float{1}, 'uint8'));
-            write(obj, typecast(data_float{1}, 'uint8'));
+            write(obj, typecast(traj_bytes, 'uint8'));
+            write(obj, typecast(data_bytes, 'uint8'));
         end
 
         function out = read_acquisition(obj)
@@ -213,8 +213,9 @@ classdef connection < handle
 
             data_bytes = read(obj, uint64(header.number_of_samples) * uint64(header.active_channels) * 8);
             data = typecast(data_bytes,'single');
+            data = data(1:2:end) + 1j*data(2:2:end);
 
-            out = ismrmrd.Acquisition(header, traj, {data});
+            out = ismrmrd.Acquisition(header, traj, data);
         end
 
         % ----- MRD_MESSAGE_ISMRMRD_IMAGE (1022) -------------------------------
@@ -235,10 +236,10 @@ classdef connection < handle
             for iImg = 1:numel(image)
                 ID = typecast(uint16(constants.MRD_MESSAGE_ISMRMRD_IMAGE),'uint8');
                 write(obj, ID);
-                write(obj, image{iImg}.head_.toBytes());
-                write(obj, typecast(uint64(length(image{iImg}.attribute_string_)),'uint8'));
-                write(obj, uint8(image{iImg}.attribute_string_));
-                write(obj, typecast(reshape(image{iImg}.data_,[],1), 'uint8'));
+                write(obj, image{iImg}.head.serialize());
+                write(obj, typecast(uint64(image{iImg}.head.attribute_string_len), 'uint8'));  % This is not a typo -- the value is stored as uint32 in ImageHeader but sent as a uint64 here
+                write(obj, uint8(image{iImg}.attribute_string));
+                write(obj, typecast(reshape(image{iImg}.data,[],1)       , 'uint8'));
             end
         end
 
@@ -261,10 +262,9 @@ classdef connection < handle
             obj.log.debug("   Reading in %d bytes of image data", nbytes)
             data_bytes = read(obj, nbytes);
 
-            image = ismrmrd.Image();
-            image.head_ = header;
-            image.attribute_string_ = attribs;
-            image = image.deserializeData(data_bytes);
+            image = ismrmrd.Image(header);
+            image.attribute_string = attribs;
+            image = image.deserializeImageData(data_bytes);
         end
 
         % ----- MRD_MESSAGE_ISMRMRD_WAVEFORM (1026) ----------------------------

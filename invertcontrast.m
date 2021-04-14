@@ -1,4 +1,9 @@
 classdef invertcontrast < handle
+	% Linting warning suppression:
+	%#ok<*INUSD>  Input argument '' might be unused.  If this is OK, consider replacing it by ~
+	%#ok<*NASGU>  The value assigned to variable '' might be unused.
+	%#ok<*INUSL>  Input argument '' might be unused, although a later one is used.  Ronsider replacing it by ~
+	
     methods
         function process(obj, connection, config, metadata, logging)
             logging.info('Config: \n%s', config);
@@ -21,8 +26,8 @@ classdef invertcontrast < handle
             end
 
             % Continuously parse incoming data parsed from MRD messages
-            acqGroup = []; %ismrmrd.Acquisition;
-            imgGroup = []; %ismrmrd.Image;
+            acqGroup = cell(1,0); % ismrmrd.Acquisition;
+            imgGroup = cell(1,0); % ismrmrd.Image;
             try
                 while true
                     item = next(connection);
@@ -32,34 +37,32 @@ classdef invertcontrast < handle
                     % ----------------------------------------------------------
                     if isa(item, 'ismrmrd.Acquisition')
                         % Accumulate all imaging readouts in a group
-                        if (~item.head.flagIsSet(item.head.FLAGS.ACQ_IS_NOISE_MEASUREMENT) && ...
-                            ~item.head.flagIsSet(item.head.FLAGS.ACQ_IS_PHASECORR_DATA))
-
-                            if isempty(acqGroup)
-                                acqGroup = ismrmrd.Acquisition(item.head, item.traj, item.data);
-                            else
-                                append(acqGroup, item.head, item.traj{:}, item.data{:});
-                            end
+                        if (~item.head.flagIsSet(item.head.FLAGS.ACQ_IS_NOISE_MEASUREMENT)    && ...
+                            ~item.head.flagIsSet(item.head.FLAGS.ACQ_IS_PHASECORR_DATA)       && ...
+                            ~item.head.flagIsSet(item.head.FLAGS.ACQ_IS_PARALLEL_CALIBRATION)       )
+                                acqGroup{end+1} = item;
                         end
 
                         % When this criteria is met, run process_raw() on the accumulated
                         % data, which returns images that are sent back to the client.
-                        if item.head.flagIsSet(item.head.FLAGS.ACQ_LAST_IN_MEASUREMENT)
+                        if item.head.flagIsSet(item.head.FLAGS.ACQ_LAST_IN_SLICE)
                             logging.info("Processing a group of k-space data")
                             image = obj.process_raw(acqGroup, config, metadata, logging);
                             logging.debug("Sending image to client")
                             connection.send_image(image);
-                            acqGroup = [];
+                            acqGroup = {};
                         end
 
                     % ----------------------------------------------------------
                     % Image data messages
                     % ----------------------------------------------------------
                     elseif isa(item, 'ismrmrd.Image')
-                        % TODO: example for which images to keep/discard
-                        if true
-                            % TODO: This has also not been implemented in the ismrmrd library...
-                            append(imgGroup, item.head_, item.data_, item.attribute_string_);
+                        % Only process magnitude images -- send phase images back without modification
+                        if (item.head.image_type == item.head.IMAGE_TYPE.MAGNITUDE)
+                            imgGroup{end+1} = item;
+                        else
+                            connection.send_image(item);
+                            continue
                         end
 
                         % When this criteria is met, run process_group() on the accumulated
@@ -67,10 +70,10 @@ classdef invertcontrast < handle
                         % TODO: logic for grouping images
                         if false
                             logging.info("Processing a group of images")
-                            image = obj.process_image(imgGroup, config, metadata, logging);
+                            image = obj.process_images(imgGroup, config, metadata, logging);
                             logging.debug("Sending image to client")
                             connection.send_image(image);
-                            imgGroup = [];
+                            imgGroup = cell(1,0);
                         end
 
                     elseif isempty(item)
@@ -93,15 +96,15 @@ classdef invertcontrast < handle
                 image = obj.process_raw(acqGroup, config, metadata, logging);
                 logging.debug("Sending image to client")
                 connection.send_image(image);
-                acqGroup = [];
+                acqGroup = cell(1,0);
             end
 
             if ~isempty(imgGroup)
                 logging.info("Processing a group of images (untriggered)")
-                image = obj.process_image(imgGroup, config, metadata, logging);
+                image = obj.process_images(imgGroup, config, metadata, logging);
                 logging.debug("Sending image to client")
                 connection.send_image(image);
-                imgGroup = [];
+                imgGroup = cell(1,0);
             end
 
             connection.send_close();
@@ -109,8 +112,13 @@ classdef invertcontrast < handle
         end
 
         function image = process_raw(obj, group, config, metadata, logging)
+            % This function assumes that the set of raw data belongs to a 
+            % single image.  If there's >1 phases, echos, sets, etc., then
+            % either the call to this function from process() needs to be
+            % adjusted or this code must be modified.
+
             % Format data into a single [RO PE cha] array
-            ksp = cat(3, group.data{:});
+            ksp = cell2mat(permute(cellfun(@(x) x.data, group, 'UniformOutput', false), [1 3 2]));
             ksp = permute(ksp, [1 3 2]);
 
             % Fourier Transform
@@ -127,30 +135,62 @@ classdef invertcontrast < handle
             img = img .* (32767./max(img(:)));
             img = int16(round(img));
 
-            % Invert image contrast
-            img = int16(abs(32767-img));
+            % Create MRD Image object, set image data and (matrix_size, channels, and data_type) in header
+            image = ismrmrd.Image(img);
 
-            % Format as ISMRMRD image data
-            image = ismrmrd.Image();
+            % Find the center k-space index
+            kspace_encode_step_1 = cellfun(@(x) x.head.idx.kspace_encode_step_1, group);
+            centerLin            = cellfun(@(x) x.head.idx.user(6),              group);
+            centerIdx = find(kspace_encode_step_1 == centerLin, 1);
 
-            image.data_ = img;
+            % Copy the relevant AcquisitionHeader fields to ImageHeader
+            image.head.fromAcqHead(group{centerIdx}.head);
 
-            % In MATLAB's ISMRMD toolbox, header information is not updated after setting image data
-            image.head_.matrix_size(1) = uint16(size(img,1));
-            image.head_.matrix_size(2) = uint16(size(img,2));
-            image.head_.matrix_size(3) = uint16(size(img,3));
-            image.head_.channels       = uint16(1);
-            image.head_.data_type      = uint16(ismrmrd.ImageHeader.DATA_TYPE.SHORT);
-            image.head_.image_index    = uint16(1);  % This field is mandatory
+            % field_of_view is mandatory
+            image.head.field_of_view  = single([metadata.encoding(1).reconSpace.fieldOfView_mm.x ...
+                                                 metadata.encoding(1).reconSpace.fieldOfView_mm.y ...
+                                                 metadata.encoding(1).reconSpace.fieldOfView_mm.z]);
 
             % Set ISMRMRD Meta Attributes
-            meta = ismrmrd.Meta();
-            meta.DataRole     = 'Image';
-            meta.WindowCenter = 16384;
-            meta.WindowWidth  = 32768;
+            meta = struct;
+            meta.DataRole       = 'Image';
+            meta.WindowCenter   = uint16(16384);
+            meta.WindowWidth    = uint16(32768);
+            meta.ImageRowDir    = group{centerIdx}.head.read_dir;
+            meta.ImageColumnDir = group{centerIdx}.head.phase_dir;
 
-            image.attribute_string_ = serialize(meta);
-            image.head_.attribute_string_len = uint32(length(image.attribute_string_));
+            % set_attribute_string also updates attribute_string_len
+            image = image.set_attribute_string(ismrmrd.Meta.serialize(meta));
+
+            % Call process_image to do actual image inversion
+            image = obj.process_images(image);
+        end
+
+        function images = process_images(obj, group, config, metadata, logging)
+            % Extract image data
+            cData = cellfun(@(x) x.data, group, 'UniformOutput', false);
+            data = cat(3, cData{:});
+
+            % Normalize and convert to short (int16)
+            data = data .* (32767./max(data(:)));
+            data = int16(round(data));
+
+            % Invert image contrast
+            data = int16(abs(32767-data));
+
+            % Re-slice back into 2D MRD images
+            images = cell(1, size(data,3));
+            for iImg = 1:size(data,3)
+                % Create MRD Image object, set image data and (matrix_size, channels, and data_type) in header
+                image = ismrmrd.Image(data(:,:,iImg));
+
+                % Copy original image header
+                image.head             = group{iImg}.head;
+                image.attribute_string = group{iImg}.attribute_string;
+                image.head.attribute_string_len = uint32(length(image.attribute_string));
+
+                images{iImg} = image;
+            end
         end
     end
 end
