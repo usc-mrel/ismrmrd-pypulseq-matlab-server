@@ -27,10 +27,12 @@ classdef server < handle
                     handle(obj);
                     flushoutput(obj.tcpHandle);
                     fclose(obj.tcpHandle);
+                    delete(obj.tcpHandle);
                     obj.tcpHandle = [];
                 catch ME
                     if ~isempty(obj.tcpHandle)
                         fclose(obj.tcpHandle);
+                        delete(obj.tcpHandle);
                         obj.tcpHandle = [];
                     end
 
@@ -81,6 +83,7 @@ classdef server < handle
         function delete(obj)
             if ~isempty(obj.tcpHandle)
                 fclose(obj.tcpHandle);
+                delete(obj.tcpHandle);
                 obj.tcpHandle = [];
             end
         end
