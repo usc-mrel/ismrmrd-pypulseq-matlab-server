@@ -250,7 +250,7 @@ classdef Dataset
             mem_space_id = H5S.create_simple(1,[N],[]);
 
             % Check and fix the acquisition header types
-            acq.head.check();
+            % acq.head.check();
             % TODO: Error checking on the sizes of the data and trajectories.
             
             % Pack the acquisition into the correct struct for writing
