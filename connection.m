@@ -44,11 +44,11 @@ classdef connection < handle
                 case constants.MRD_MESSAGE_ISMRMRD_IMAGE
                     out = read_image(obj);
                 otherwise
-                    out = unknown_message_identifier(identifier);
+                    out = unknown_message_identifier(obj, identifier);
             end
         end
 
-        function out = unknown_message_identifier(identifier)
+        function out = unknown_message_identifier(obj, identifier)
             obj.log.error("Received unknown message type: %d", double(identifier));
             out = [];
         end
