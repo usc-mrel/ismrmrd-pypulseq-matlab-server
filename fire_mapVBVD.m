@@ -185,11 +185,12 @@ classdef fire_mapVBVD < handle
 
                 % Set ISMRMRD Meta Attributes
                 meta = struct;
-                meta.DataRole       = 'Image';
-                meta.WindowCenter   = uint16(16384);
-                meta.WindowWidth    = uint16(32768);
-                meta.ImageRowDir    = group{centerIdx}.head.read_dir;
-                meta.ImageColumnDir = group{centerIdx}.head.phase_dir;
+                meta.DataRole               = 'Image';
+                meta.ImageProcessingHistory = 'MATLAB';
+                meta.WindowCenter           = uint16(16384);
+                meta.WindowWidth            = uint16(32768);
+                meta.ImageRowDir            = group{centerIdx}.head.read_dir;
+                meta.ImageColumnDir         = group{centerIdx}.head.phase_dir;
 
                 % set_attribute_string also updates attribute_string_len
                 image = image.set_attribute_string(ismrmrd.Meta.serialize(meta));

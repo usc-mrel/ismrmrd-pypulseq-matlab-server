@@ -1,9 +1,10 @@
 classdef invertcontrast < handle
-	% Linting warning suppression:
-	%#ok<*INUSD>  Input argument '' might be unused.  If this is OK, consider replacing it by ~
-	%#ok<*NASGU>  The value assigned to variable '' might be unused.
-	%#ok<*INUSL>  Input argument '' might be unused, although a later one is used.  Ronsider replacing it by ~
-	
+    % Linting warning suppression:
+    %#ok<*INUSD>  Input argument '' might be unused.  If this is OK, consider replacing it by ~
+    %#ok<*NASGU>  The value assigned to variable '' might be unused.
+    %#ok<*INUSL>  Input argument '' might be unused, although a later one is used.  Ronsider replacing it by ~
+    %#ok<*AGROW>  The variable '' appear to change in size on every loop  iteration. Consider preallocating for speed.
+
     methods
         function process(obj, connection, config, metadata, logging)
             logging.info('Config: \n%s', config);
@@ -153,17 +154,18 @@ classdef invertcontrast < handle
 
             % Set ISMRMRD Meta Attributes
             meta = struct;
-            meta.DataRole       = 'Image';
-            meta.WindowCenter   = uint16(16384);
-            meta.WindowWidth    = uint16(32768);
-            meta.ImageRowDir    = group{centerIdx}.head.read_dir;
-            meta.ImageColumnDir = group{centerIdx}.head.phase_dir;
+            meta.DataRole               = 'Image';
+            meta.ImageProcessingHistory = 'MATLAB';
+            meta.WindowCenter           = uint16(16384);
+            meta.WindowWidth            = uint16(32768);
+            meta.ImageRowDir            = group{centerIdx}.head.read_dir;
+            meta.ImageColumnDir         = group{centerIdx}.head.phase_dir;
 
             % set_attribute_string also updates attribute_string_len
             image = image.set_attribute_string(ismrmrd.Meta.serialize(meta));
 
             % Call process_image to do actual image inversion
-            image = obj.process_images(image);
+            image = obj.process_images({image});
         end
 
         function images = process_images(obj, group, config, metadata, logging)
@@ -186,8 +188,11 @@ classdef invertcontrast < handle
 
                 % Copy original image header
                 image.head             = group{iImg}.head;
-                image.attribute_string = group{iImg}.attribute_string;
-                image.head.attribute_string_len = uint32(length(image.attribute_string));
+
+                % Add to ImageProcessingHistory
+                meta = ismrmrd.Meta.deserialize(group{iImg}.attribute_string);
+                meta = ismrmrd.Meta.appendValue(meta, 'ImageProcessingHistory', 'INVERT');
+                image = image.set_attribute_string(ismrmrd.Meta.serialize(meta));
 
                 images{iImg} = image;
             end
