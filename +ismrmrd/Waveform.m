@@ -1,114 +1,79 @@
 classdef Waveform < handle
+    % Class for the MRD Waveform data structure as described in:
+    % https://ismrmrd.github.io/apidocs/1.4.2/struct_i_s_m_r_m_r_d_1_1_i_s_m_r_m_r_d___waveform.html
+    %
+    % This class contains 2 components:
+    %   - head: A WaveformHeader describing metadata for a waveform
+    %   - data: waveform data array
+    %
+    % Each instance of this class describes a single waveform and multiple
+    % Waveform objects in a cell array should be used to collect a series of
+    % multiple readouts.
+    %
+    % A series of "set" functions is provided for each WaveformHeader field.
+    % These should be used whenever possible in order to ensure valid data type
+    % and size for each parameter.  If data is pre-validated by the user and
+    % faster performance is required, individual fields can be set directly,
+    % bypassing internal data validation.
 
     properties
-        head = [];
-        data = {};
+        head = ismrmrd.WaveformHeader;
+        data = [];
     end
 
     methods
-
+        % Constructor
         function obj = Waveform(arg1, data)
             switch nargin
                 case 0
-                    % No argument constructor
-                    % initialize to a single wavuisition
-                    extend(obj,1);
-                    
+                    % Empty waveform
                 case 1
                     % One argument constructor
-                    if ismrmrd.util.isInt(arg1)
-                        % First argument is a number
-                        M = arg1;
-                        extend(obj,M);
+                    if isa(arg1, 'ismrmrd.Waveform')
+                        % Already formatted Waveform object
+                        obj = arg1;
                     elseif isa(arg1,'ismrmrd.WaveformHeader')
+                        % Just the header
                         obj.head = arg1;
                         obj.initializeData();
                     else
-                        % First argument is a header (hopefully)
-                        M = length(arg1.version);
-                        obj.head = ismrmrd.WaveformHeader(arg1);
-                        obj.initializeData();
+                        % Unknown type
+                        error('Unsupported constructor with input class %s', class(arg))
                     end
-                    
                 case 2
-                    % Two argument constructor
-                    obj.head = ismrmrd.WaveformHeader(arg1);
-                    M = length(arg1.version);
+                    % Constructor with head and data
+                    obj.head = arg1;
+
                     if isempty(data)
-                        obj.data{M} = [];
+                        obj.data = [];
                     else
-                        if ~iscell(data)
-                            data = {data};
+                        data = typecast(data, 'uint32');
+                        dims = [obj.head.number_of_samples obj.head.channels];
+                        if (prod(dims) ~= numel(data))
+                            error('Waveform data has %d elements, which must be equal to number_of_samples (%d) * channels (%d)', numel(data), dims(1), dims(2))
                         end
-                        obj.dataFromInt(data);
+                        obj.data = reshape(data, dims);
                     end
-                    
             otherwise
-                    error('ismrmrd.Acquistion constructor, wrong number of arguments.');
-            end
-        end
-        
-        function nwav = getNumber(obj)
-            nwav = obj.head.getNumber();
-        end
-        
-        function wav = select(obj, range)
-            % Return a copy of a range of waveforms
-            
-            % create an empty waveform
-            wav = ismrmrd.Waveform();
-            % Fill the header
-            wav.head = obj.head.select(range);
-            % Fill the data
-            for p = 1:length(range)
-                wav.data{p} = obj.data{range(p)};
-            end    
-        end
-        
-        function append(obj, head, data)
-            Nstart = obj.getNumber + 1;
-            Nend   = obj.getNumber + length(head.version);
-            Nrange = Nstart:Nend;
-            obj.head.append(head);
-            if ~isempty(data)
-                obj.data{Nrange} = data;
-            end
-            
-        end
-        
-        function extend(obj,N)
-            % Extend with blank head and empty data.
-            if isempty(obj.head)
-                M = N;
-                obj.head = ismrmrd.WaveformHeader(N);
-            else
-                M = N+obj.getNumber();
-                obj.head.extend(N);
-            end
-            obj.data{M} = []; 
-        end
-        
-        function dataFromInt(obj,v)
-            if (isempty(obj.head) || (length(v) ~= length(obj.head.version)))
-                error('Mismatch between size of head and data.  Please set head first.');
-            end
-            obj.data = cell(1,length(v));
-            for p = 1:length(v)
-                dims = [ obj.head.number_of_samples(p),...
-                        obj.head.channels(p)
-                       ];
-                buff = typecast(v{p}, 'uint32');
-                obj.data{p} = reshape(buff, dims);
+                error('Constructor must have 0, 1, or 2 arguments.');
             end
         end
 
+        % Set handlers with data validation
+        function obj = set_version(           obj, val),  obj.head = obj.head.set_version(           val );  end
+        function obj = set_flags(             obj, val),  obj.head = obj.head.set_flags(             val );  end
+        function obj = set_measurement_uid(   obj, val),  obj.head = obj.head.set_measurement_uid(   val );  end
+        function obj = set_scan_counter(      obj, val),  obj.head = obj.head.set_scan_counter(      val );  end
+        function obj = set_time_stamp(        obj, val),  obj.head = obj.head.set_time_stamp(        val );  end
+        function obj = set_number_of_samples( obj, val),  obj.head = obj.head.set_number_of_samples( val );  end
+        function obj = set_channels(          obj, val),  obj.head = obj.head.set_channels(          val );  end
+        function obj = set_sample_time_us(    obj, val),  obj.head = obj.head.set_sample_time_us(    val );  end
+        function obj = set_waveform_id(       obj, val),  obj.head = obj.head.set_waveform_id(       val );  end
     end
     
     methods(Access = private)
         function initializeData(obj)
-            for k = 1:length(obj.head.version)
-                obj.data{k} = zeros(obj.head.number_of_samples(k),obj.head.channels(k),'uint32');
-            end
+            obj.data = zeros(obj.head.number_of_samples, obj.head.channels, 'uint32');
         end
     end
 

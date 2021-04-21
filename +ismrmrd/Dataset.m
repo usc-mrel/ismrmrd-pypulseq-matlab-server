@@ -10,7 +10,6 @@ classdef Dataset
     end
 
     methods
-
         function obj = Dataset(filename,groupname)
 
             % Set the hdf types
@@ -185,7 +184,11 @@ classdef Dataset
                          mem_space, space, 'H5P_DEFAULT');
                      
             % Pack'em
-            block = ismrmrd.Acquisition(d.head, d.traj, d.data);
+            head = ismrmrd.Dataset.SplitHDF5Header(d.head, ismrmrd.AcquisitionHeader);
+            block = cell(1, numel(head));
+            for i = 1:numel(block)
+                block{i} = ismrmrd.Acquisition(head{i}, d.traj{i}, d.data{i});
+            end
 
             % Clean up
             H5S.close(mem_space);
@@ -422,4 +425,64 @@ classdef Dataset
 
     end
 
+    methods (Static)
+        function out = SplitHDF5Header(inStruct, outTemplate)
+            % Split an HDF5 formatted multi-header into a cell array
+            %
+            % Header in HDF5 files are stored in an array that contain all measurements or
+            % images, e.g.:
+            %                    version: [4912×1 uint16]
+            %      physiology_time_stamp: [3×4912 uint32]
+            %                        idx: [1×1 struct]
+            %
+            % Split this into a cell array of class 'outTemplate', as MRD Acquisitions and
+            % Images are stored indepdently.
+            
+            fields = fieldnames(inStruct);
+        
+            % Determine number of measurements.  This is somwhat complicated by the fact
+            % that the dimension in which the repeats are store can be inconsistent, if
+            % the header parameter has >1 value, e.g.:
+            %                    version: [4912×1 uint16]
+            %      physiology_time_stamp: [3×4912 uint32]
+            sz = size(inStruct.(fields{1}));
+            if (~ismatrix(sz))
+                error('Could not determine number of measurements from field ''%s'' with size [%s]', fields{1}, num2str(sz, ' %d'))
+            end
+        
+            if (sz(2) == 1)
+                nMeas = sz(1);
+            else
+                nMeas = sz(2);
+            end
+        
+            out = repmat({outTemplate}, [1 nMeas]);
+        
+            for iField = 1:numel(fields)
+                if ~isstruct(inStruct.(fields{iField}))
+                    for iMeas = 1:nMeas
+                        sz = size(inStruct.(fields{iField}));
+                        if (~ismatrix(sz))
+                            error('Field ''%s'' has unsupported size [%s]', fields{1}, num2str(sz, ' %d'))
+                        end
+        
+                        if (sz(2) == 1)
+                            out{iMeas}.(fields{iField}) = inStruct.(fields{iField})(iMeas);
+                        else
+                            out{iMeas}.(fields{iField}) = inStruct.(fields{iField})(:,iMeas)';
+                        end
+                    end
+                else
+                    % Not a great generalizable way of doing this, but there's no other
+                    % implicit way of determining the class of a sub-struct
+                    if isfield(inStruct.(fields{iField}), 'kspace_encode_step_1')
+                        outSub = SplitGroupedHeader(inStruct.(fields{iField}), ismrmrd.EncodingCounters);
+                        for iMeas = 1:nMeas
+                            out{iMeas}.(fields{iField}) = outSub{iMeas};
+                        end
+                    end
+                end
+            end
+        end
+    end % methods (Static)
 end

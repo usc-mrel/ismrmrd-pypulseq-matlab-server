@@ -1,5 +1,21 @@
 % ISMRMRD Image class
 classdef Image
+    % Class for the MRD Image data structure as described in:
+    % https://ismrmrd.github.io/apidocs/1.4.2/class_i_s_m_r_m_r_d_1_1_image.html
+    %
+    % This class contains 3 components:
+    %   - head:             An ImageHeader describing metadata for an
+    %   - data:             Image data array
+    %   - attribute_string: XML string representation of MetaAttributes
+    %
+    % Each instance of this class describes a single image and multiple Image
+    % objects in a cell array should be used to collect a series of images.
+    %
+    % A series of "set" functions is provided for each ImageHeader field.
+    % These should be used whenever possible in order to ensure valid data type
+    % and size for each parameter.  If data is pre-validated by the user and
+    % faster performance is required, individual fields can be set directly,
+    % bypassing internal data validation.
 
     properties
         head             = ismrmrd.ImageHeader;
@@ -30,20 +46,6 @@ classdef Image
                 otherwise
                     error('Constructor must have 0 or 1 arguments.')
             end
-        end
-
-        % Set attribute_string and update its length in head_
-        function obj = set.attribute_string(obj, val)
-            d = dbstack;
-            if (numel(d) < 2) || ~strcmp(d(2).name, 'Image.set_attribute_string')
-                warning('Use function set_attribute_string() instead to also update attribute_string_len');
-            end
-
-            if ~ischar(val)
-                error('attribute_string must be a char')
-            end
-            obj.attribute_string = val;
-%             obj.head.attribute_string_len = length(val);
         end
 
         % Set attribute_string and update its length in head_

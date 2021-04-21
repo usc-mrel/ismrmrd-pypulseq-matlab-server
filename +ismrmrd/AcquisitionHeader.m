@@ -1,4 +1,15 @@
 classdef AcquisitionHeader
+    % Class for the MRD AcquisitionHeader data structure as described in:
+    % https://ismrmrd.github.io/apidocs/1.4.2/struct_i_s_m_r_m_r_d_1_1_i_s_m_r_m_r_d___acquisition_header.html
+    %
+    % A series of "set" functions should be used whenever possible in order to
+    % ensure valid data type and size for each parameter.  These functions are
+    % intentionally not part of the set handlers to improve performance when a
+    % large amount of pre-validated data is being converted.
+    %
+    % serialize() and deserialize() functions are provided to convert this data
+    % structure to/from a byte string used during streaming/networking.
+
     properties
         version                   = zeros(1, 1,'uint16');     % First unsigned int indicates the version
         flags                     = zeros(1, 1,'uint64');     % bit field with flags
@@ -21,11 +32,11 @@ classdef AcquisitionHeader
         phase_dir                 = zeros(1, 3,'single');     % Directional cosines of the phase encoding
         slice_dir                 = zeros(1, 3,'single');     % Directional cosines of the slice
         patient_table_position    = zeros(1, 3,'single');     % Patient table off-center
-        idx                       = ismrmrd.IndexCounters;    % Encoding loop counters
+        idx                       = ismrmrd.EncodingCounters; % Encoding loop counters
         user_int                  = zeros(1, 8,'uint32');     % Free user parameters
         user_float                = zeros(1, 8,'single');     % Free user parameters
     end
-    
+
     properties(Constant)
         FLAGS = struct( ...
             'ACQ_FIRST_IN_ENCODE_STEP1',                1, ...
@@ -100,30 +111,36 @@ classdef AcquisitionHeader
         end
 
         % Set handlers for each property to ensure correct type and size
-        function obj = set.version(               obj, val),  if obj.ValidateSize(val, [1  1], 'version'),                obj.version                = uint16(val); end,  end
-        function obj = set.flags(                 obj, val),  if obj.ValidateSize(val, [1  1], 'flags'),                  obj.flags                  = uint64(val); end,  end
-        function obj = set.measurement_uid(       obj, val),  if obj.ValidateSize(val, [1  1], 'measurement_uid'),        obj.measurement_uid        = uint32(val); end,  end
-        function obj = set.scan_counter(          obj, val),  if obj.ValidateSize(val, [1  1], 'scan_counter'),           obj.scan_counter           = uint32(val); end,  end
-        function obj = set.acquisition_time_stamp(obj, val),  if obj.ValidateSize(val, [1  1], 'acquisition_time_stamp'), obj.acquisition_time_stamp = uint32(val); end,  end
-        function obj = set.physiology_time_stamp( obj, val),  if obj.ValidateSize(val, [1  3], 'physiology_time_stamp'),  obj.physiology_time_stamp  = uint32(val); end,  end
-        function obj = set.number_of_samples(     obj, val),  if obj.ValidateSize(val, [1  1], 'number_of_samples'),      obj.number_of_samples      = uint16(val); end,  end
-        function obj = set.available_channels(    obj, val),  if obj.ValidateSize(val, [1  1], 'available_channels'),     obj.available_channels     = uint16(val); end,  end
-        function obj = set.active_channels(       obj, val),  if obj.ValidateSize(val, [1  1], 'active_channels'),        obj.active_channels        = uint16(val); end,  end
-        function obj = set.channel_mask(          obj, val),  if obj.ValidateSize(val, [1 16], 'channel_mask'),           obj.channel_mask           = uint64(val); end,  end
-        function obj = set.discard_pre(           obj, val),  if obj.ValidateSize(val, [1  1], 'discard_pre'),            obj.discard_pre            = uint16(val); end,  end
-        function obj = set.discard_post(          obj, val),  if obj.ValidateSize(val, [1  1], 'discard_post'),           obj.discard_post           = uint16(val); end,  end
-        function obj = set.center_sample(         obj, val),  if obj.ValidateSize(val, [1  1], 'center_sample'),          obj.center_sample          = uint16(val); end,  end
-        function obj = set.encoding_space_ref(    obj, val),  if obj.ValidateSize(val, [1  1], 'encoding_space_ref'),     obj.encoding_space_ref     = uint16(val); end,  end
-        function obj = set.trajectory_dimensions( obj, val),  if obj.ValidateSize(val, [1  1], 'trajectory_dimensions'),  obj.trajectory_dimensions  = uint16(val); end,  end
-        function obj = set.sample_time_us(        obj, val),  if obj.ValidateSize(val, [1  1], 'sample_time_us'),         obj.sample_time_us         = single(val); end,  end
-        function obj = set.position(              obj, val),  if obj.ValidateSize(val, [1  3], 'position'),               obj.position               = single(val); end,  end
-        function obj = set.read_dir(              obj, val),  if obj.ValidateSize(val, [1  3], 'read_dir'),               obj.read_dir               = single(val); end,  end
-        function obj = set.phase_dir(             obj, val),  if obj.ValidateSize(val, [1  3], 'phase_dir'),              obj.phase_dir              = single(val); end,  end
-        function obj = set.slice_dir(             obj, val),  if obj.ValidateSize(val, [1  3], 'slice_dir'),              obj.slice_dir              = single(val); end,  end
-        function obj = set.patient_table_position(obj, val),  if obj.ValidateSize(val, [1  3], 'patient_table_position'), obj.patient_table_position = single(val); end,  end
-        function obj = set.user_int(              obj, val),  if obj.ValidateSize(val, [1  8], 'user_int'),               obj.user_int               =  int32(val); end,  end
-        function obj = set.user_float(            obj, val),  if obj.ValidateSize(val, [1  8], 'user_float'),             obj.user_float             = single(val); end,  end
-        % Note: The set handles for the idx fields are handled in the IndexCounters class
+        % Ideally, these would be the actual set handler (e.g. set.version())
+        % so the size/type is strictly enforced, but MATLAB has a significant
+        % performance overhead for set handlers.  The deserialize() function
+        % should bypass these for performance reasons when receiving large
+        % amounts of data.  In all other cases, these functions should be used
+        % via the Acquisition class to prevent inadvertent errors.
+        function obj = set_version(               obj, val),  if obj.ValidateSize(val, [1  1], 'version'),                obj.version                = uint16(val); end,  end
+        function obj = set_flags(                 obj, val),  if obj.ValidateSize(val, [1  1], 'flags'),                  obj.flags                  = uint64(val); end,  end
+        function obj = set_measurement_uid(       obj, val),  if obj.ValidateSize(val, [1  1], 'measurement_uid'),        obj.measurement_uid        = uint32(val); end,  end
+        function obj = set_scan_counter(          obj, val),  if obj.ValidateSize(val, [1  1], 'scan_counter'),           obj.scan_counter           = uint32(val); end,  end
+        function obj = set_acquisition_time_stamp(obj, val),  if obj.ValidateSize(val, [1  1], 'acquisition_time_stamp'), obj.acquisition_time_stamp = uint32(val); end,  end
+        function obj = set_physiology_time_stamp( obj, val),  if obj.ValidateSize(val, [1  3], 'physiology_time_stamp'),  obj.physiology_time_stamp  = uint32(val); end,  end
+        function obj = set_number_of_samples(     obj, val),  if obj.ValidateSize(val, [1  1], 'number_of_samples'),      obj.number_of_samples      = uint16(val); end,  end
+        function obj = set_available_channels(    obj, val),  if obj.ValidateSize(val, [1  1], 'available_channels'),     obj.available_channels     = uint16(val); end,  end
+        function obj = set_active_channels(       obj, val),  if obj.ValidateSize(val, [1  1], 'active_channels'),        obj.active_channels        = uint16(val); end,  end
+        function obj = set_channel_mask(          obj, val),  if obj.ValidateSize(val, [1 16], 'channel_mask'),           obj.channel_mask           = uint64(val); end,  end
+        function obj = set_discard_pre(           obj, val),  if obj.ValidateSize(val, [1  1], 'discard_pre'),            obj.discard_pre            = uint16(val); end,  end
+        function obj = set_discard_post(          obj, val),  if obj.ValidateSize(val, [1  1], 'discard_post'),           obj.discard_post           = uint16(val); end,  end
+        function obj = set_center_sample(         obj, val),  if obj.ValidateSize(val, [1  1], 'center_sample'),          obj.center_sample          = uint16(val); end,  end
+        function obj = set_encoding_space_ref(    obj, val),  if obj.ValidateSize(val, [1  1], 'encoding_space_ref'),     obj.encoding_space_ref     = uint16(val); end,  end
+        function obj = set_trajectory_dimensions( obj, val),  if obj.ValidateSize(val, [1  1], 'trajectory_dimensions'),  obj.trajectory_dimensions  = uint16(val); end,  end
+        function obj = set_sample_time_us(        obj, val),  if obj.ValidateSize(val, [1  1], 'sample_time_us'),         obj.sample_time_us         = single(val); end,  end
+        function obj = set_position(              obj, val),  if obj.ValidateSize(val, [1  3], 'position'),               obj.position               = single(val); end,  end
+        function obj = set_read_dir(              obj, val),  if obj.ValidateSize(val, [1  3], 'read_dir'),               obj.read_dir               = single(val); end,  end
+        function obj = set_phase_dir(             obj, val),  if obj.ValidateSize(val, [1  3], 'phase_dir'),              obj.phase_dir              = single(val); end,  end
+        function obj = set_slice_dir(             obj, val),  if obj.ValidateSize(val, [1  3], 'slice_dir'),              obj.slice_dir              = single(val); end,  end
+        function obj = set_patient_table_position(obj, val),  if obj.ValidateSize(val, [1  3], 'patient_table_position'), obj.patient_table_position = single(val); end,  end
+        function obj = set_user_int(              obj, val),  if obj.ValidateSize(val, [1  8], 'user_int'),               obj.user_int               =  int32(val); end,  end
+        function obj = set_user_float(            obj, val),  if obj.ValidateSize(val, [1  8], 'user_float'),             obj.user_float             = single(val); end,  end
+        % Note: The set handles for the idx fields are handled in the EncodingCounters class
 
         % Convert from the byte array of the C-struct memory layout for an ISMRMRD AcquisitionHeader
         function obj = deserialize(obj, bytes)
@@ -135,8 +152,8 @@ classdef AcquisitionHeader
                 bytes = bytes';
             end
 
-            obj.version                  = typecast(bytes( 1:   2), 'uint16');  % First unsigned int indicates the version
-            obj.flags                    = typecast(bytes( 3:  10), 'uint64');  % bit field with flags
+            obj.version                  = typecast(bytes(  1:  2), 'uint16');  % First unsigned int indicates the version
+            obj.flags                    = typecast(bytes(  3: 10), 'uint64');  % bit field with flags
             obj.measurement_uid          = typecast(bytes( 11: 14), 'uint32');  % Unique ID for the measurement
             obj.scan_counter             = typecast(bytes( 15: 18), 'uint32');  % Current acquisition number in the measurement
             obj.acquisition_time_stamp   = typecast(bytes( 19: 22), 'uint32');  % Acquisition clock
@@ -210,7 +227,7 @@ classdef AcquisitionHeader
                            typecast(obj.user_float               ,'uint8'));
 
             if (numel(bytes) ~= 340)
-                error('Serialized Acquisitionheader is %d bytes instead of 198 bytes', numel(bytes));
+                error('Serialized Acquisitionheader is %d bytes instead of 340 bytes', numel(bytes));
             end
         end
 
@@ -259,6 +276,12 @@ classdef AcquisitionHeader
         % Clear all flags
         function obj = flagClearAll(obj)
             obj.flags = zeros(1, 1,'uint64');
+        end
+
+        % Get cell array with names of all active flags
+        function cFlags = getFlags(obj)
+            flagnames = fieldnames(obj.FLAGS);
+            cFlags = flagnames(cellfun(@(x) logical(obj.flagIsSet(x)), flagnames));
         end
     end
 end

@@ -23,7 +23,7 @@ classdef fire_mapVBVD < handle
             % Continuously parse incoming data parsed from MRD messages
             acqGroup = cell(1,0); % ismrmrd.Acquisition;
             imgGroup = cell(1,0); % ismrmrd.Image;
-            wavGroup = []; %ismrmrd.Waveform;
+            wavGroup = cell(1,0); % ismrmrd.Waveform;
             try
                 while true
                     item = next(connection);
@@ -76,11 +76,7 @@ classdef fire_mapVBVD < handle
                     % Waveform data messages
                     % ----------------------------------------------------------
                     elseif isa(item, 'ismrmrd.Waveform')
-                        if isempty(wavGroup)
-                            wavGroup = item;
-                        else
-                            append(wavGroup, item.head, item.data{:});
-                        end
+                        wavGroup{end+1} = item;
 
                     elseif isempty(item)
                         break;
@@ -97,12 +93,12 @@ classdef fire_mapVBVD < handle
             % is time-ordered, but no additional checking for missing data.
             % ecgData has shape (5 x timepoints)
             if ~isempty(wavGroup)
-                indsEcg = (wavGroup.head.waveform_id == 0);
-                ecgTime = wavGroup.head.time_stamp(indsEcg);
-                ecgData = wavGroup.data(indsEcg);
+                isEcg   = cellfun(@(x) (x.head.waveform_id == 0), wavGroup);
+                ecgTime = cellfun(@(x) x.head.time_stamp, wavGroup(isEcg));
 
                 [~, sortedInds] = sort(ecgTime);
-                ecgData = cat(1, ecgData{sortedInds});
+                indsEcg = find(isEcg);
+                ecgData = cell2mat(permute(cellfun(@(x) x.data, wavGroup(indsEcg(sortedInds)), 'UniformOutput', false), [2 1]));
             end
 
             % Process any remaining groups of raw or image data.  This can 
