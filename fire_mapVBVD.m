@@ -146,7 +146,7 @@ classdef fire_mapVBVD < handle
                 ksp = permute(ksp, [1 3 2]);
 
                 % Pad array to match intended recon space (properly account for phase resolution, partial Fourier, asymmetric echo, etc. later)
-                ksp(metadata.encoding.reconSpace.matrixSize.x*2, metadata.encoding.reconSpace.matrixSize.y,:) = 0;
+                ksp(metadata.encoding(1).reconSpace.matrixSize.x*2, metadata.encoding(1).reconSpace.matrixSize.y,:) = 0;
 
                 % Fourier Transform
                 img = fftshift(fft2(ifftshift(ksp)));
@@ -169,7 +169,12 @@ classdef fire_mapVBVD < handle
                 image = ismrmrd.Image(img);
 
                 % Find the center k-space index
-                centerIdx = find((twix_obj.Lin == twix_obj.centerLin) & (twix_obj.Sli == iSli), 1);
+                centerIdx = find((twix_obj.Lin == twix_obj.centerLin) & (twix_obj.Sli == iSli-1), 1);
+
+                if isempty(centerIdx)
+                    warning('Could not find center k-space readout')
+                    centerIdx = 1;
+                end
 
                 % Copy the relevant AcquisitionHeader fields to ImageHeader
                 image.head.fromAcqHead(group{centerIdx}.head);
