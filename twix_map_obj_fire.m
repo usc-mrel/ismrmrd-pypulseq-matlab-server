@@ -126,7 +126,7 @@ classdef twix_map_obj_fire < handle %matlab.mixin.Copyable %handle
                     obj.Ide(iRO)) ... % 16: Ide
                         = obj.mrdAcq{iRO}.data;
             end
-				end
+        end
 
         % Return all k-space data without sorting [RO Cha Lin]
         function ksp = unsorted(obj)
@@ -147,7 +147,7 @@ classdef twix_map_obj_fire < handle %matlab.mixin.Copyable %handle
 
             % Loop indices for each (unsorted) line
             obj.Lin              =          cellfun(@(x) x.head.idx.kspace_encode_step_1, mrdAcq) + 1;
-            obj.Par              =          cellfun(@(x) x.head.idx.kspace_encode_step_1, mrdAcq) + 1;
+            obj.Par              =          cellfun(@(x) x.head.idx.kspace_encode_step_2, mrdAcq) + 1;
             obj.Sli              =          cellfun(@(x) x.head.idx.slice,                mrdAcq) + 1;
             obj.Ave              =          cellfun(@(x) x.head.idx.average,              mrdAcq) + 1;
             obj.Phs              =          cellfun(@(x) x.head.idx.phase,                mrdAcq) + 1;
@@ -164,9 +164,9 @@ classdef twix_map_obj_fire < handle %matlab.mixin.Copyable %handle
             obj.scancounter      =          cellfun(@(x) x.head.scan_counter,             mrdAcq);
             obj.timestamp        =          cellfun(@(x) x.head.acquisition_time_stamp,   mrdAcq);
             obj.pmutime          = cell2mat(cellfun(@(x) x.head.physiology_time_stamp',   mrdAcq, 'UniformOutput', false));
-            obj.centerCol        =          cellfun(@(x) x.head.center_sample,            mrdAcq);
-            obj.centerLin        =          cellfun(@(x) x.head.idx.user(6),              mrdAcq);
-            obj.centerPar        =          cellfun(@(x) x.head.idx.user(7),              mrdAcq);
+            obj.centerCol        =          cellfun(@(x) x.head.center_sample,            mrdAcq) + 1;
+            obj.centerLin        =          cellfun(@(x) x.head.idx.user(6),              mrdAcq) + 1;
+            obj.centerPar        =          cellfun(@(x) x.head.idx.user(7),              mrdAcq) + 1;
             obj.timeSinceRF      =          cellfun(@(x) x.head.user_int(8),              mrdAcq);
             obj.cutOff           = cell2mat(cellfun(@(x) [x.head.discard_pre; x.head.discard_post], mrdAcq, 'UniformOutput', false));
 

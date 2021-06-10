@@ -133,70 +133,80 @@ classdef fire_mapVBVD < handle
             twix_obj = twix_map_obj_fire;
             twix_obj.setMrdAcq(group);
 
-            ksp = twix_obj.imageData();
+            kspAll = twix_obj.imageData();
             logging.info("Data is 'mapVBVD formatted' with dimensions:")  % Data is 'mapVBVD formatted' with dimensions:
-            logging.info(sprintf('%s ', twix_obj.dataDims{1:11}))         % Col Cha Lin Par Sli Ave Phs Eco Rep Set Seg
-            logging.info(sprintf('%3d ', size(ksp)))                      % 352  30 189   1   1   1  27   1   1   1   9 
+            logging.info(sprintf('%s ', twix_obj.dataDims{1:10}))         % Col Cha Lin Par Sli Ave Phs Eco Rep Set
+            logging.info(sprintf('%3d ', size(kspAll)))                   % 404  14 124   1   1   1   1   1   1  11
 
             for iSli = 1:twix_obj.NSli
-                % Extract only the first slice/average/phs, etc.
-                ksp = ksp(:,:,:,1,iSli,1,1,1,1,1,:,1,1,1,1,1);
+                for iAve = 1:twix_obj.NAve
+                    for iPhs = 1:twix_obj.NPhs
+                        for iEco = 1:twix_obj.NEco
+                            for iRep = 1:twix_obj.NRep
+                                for iSet = 1:twix_obj.NSet
+                                    % Extract only one slice/average/phs, etc. at a time
+                                    ksp = kspAll(:,:,:,:,iSli,iAve,iPhs,iEco,iRep,iSet);
 
-                % Format data into a single [RO PE cha] array
-                ksp = permute(ksp, [1 3 2]);
+                                    % Format data into a single [RO PE cha] array
+                                    ksp = permute(ksp, [1 3 2]);
 
-                % Pad array to match intended recon space (properly account for phase resolution, partial Fourier, asymmetric echo, etc. later)
-                ksp(metadata.encoding(1).reconSpace.matrixSize.x*2, metadata.encoding(1).reconSpace.matrixSize.y,:) = 0;
+                                    % Pad array to match intended recon space (properly account for phase resolution, partial Fourier, asymmetric echo, etc. later)
+                                    ksp(metadata.encoding(1).reconSpace.matrixSize.x*2, metadata.encoding(1).reconSpace.matrixSize.y,:) = 0;
 
-                % Fourier Transform
-                img = fftshift(fft2(ifftshift(ksp)));
+                                    % Fourier Transform
+                                    img = fftshift(fft2(ifftshift(ksp)));
 
-                % Sum of squares coil combination
-                img = sqrt(sum(abs(img).^2,3));
+                                    % Sum of squares coil combination
+                                    img = sqrt(sum(abs(img).^2,3));
 
-                % Remove phase oversampling
-                img = img(round(size(img,1)/4+1):round(size(img,1)*3/4),:);
-                logging.debug("Image data is size %d x %d after coil combine and phase oversampling removal", size(img))
-            
-                % Normalize and convert to short (int16)
-                img = img .* (32767./max(img(:)));
-                img = int16(round(img));
+                                    % Remove phase oversampling
+                                    img = img(round(size(img,1)/4+1):round(size(img,1)*3/4),:);
+                                    logging.debug("Image data is size %d x %d after coil combine and phase oversampling removal", size(img))
 
-                % Invert image contrast
-                img = int16(abs(32767-img));
+                                    % Normalize and convert to short (int16)
+                                    img = img .* (32767./max(img(:)));
+                                    img = int16(round(img));
 
-                % Format as ISMRMRD image data
-                image = ismrmrd.Image(img);
+                                    % Invert image contrast
+                                    img = int16(abs(32767-img));
 
-                % Find the center k-space index
-                centerIdx = find((twix_obj.Lin == twix_obj.centerLin) & (twix_obj.Sli == iSli-1), 1);
+                                    % Format as ISMRMRD image data
+                                    image = ismrmrd.Image(img);
 
-                if isempty(centerIdx)
-                    warning('Could not find center k-space readout')
-                    centerIdx = 1;
+                                    % Find the center k-space index
+                                    centerIdx = find((twix_obj.Lin == twix_obj.centerLin) & (twix_obj.Sli == iSli), 1);
+
+                                    if isempty(centerIdx)
+                                        warning('Could not find center k-space readout')
+                                        centerIdx = 1;
+                                    end
+
+                                    % Copy the relevant AcquisitionHeader fields to ImageHeader
+                                    image.head.fromAcqHead(group{centerIdx}.head);
+
+                                    % field_of_view is mandatory
+                                    image.head.field_of_view  = single([metadata.encoding(1).reconSpace.fieldOfView_mm.x ...
+                                                                        metadata.encoding(1).reconSpace.fieldOfView_mm.y ...
+                                                                        metadata.encoding(1).reconSpace.fieldOfView_mm.z]);
+
+                                    % Set ISMRMRD Meta Attributes
+                                    meta = struct;
+                                    meta.DataRole               = 'Image';
+                                    meta.ImageProcessingHistory = 'MATLAB';
+                                    meta.WindowCenter           = uint16(16384);
+                                    meta.WindowWidth            = uint16(32768);
+                                    meta.ImageRowDir            = group{centerIdx}.head.read_dir;
+                                    meta.ImageColumnDir         = group{centerIdx}.head.phase_dir;
+
+                                    % set_attribute_string also updates attribute_string_len
+                                    image = image.set_attribute_string(ismrmrd.Meta.serialize(meta));
+
+                                    images{end+1} = image;
+                                end
+                            end
+                        end
+                    end
                 end
-
-                % Copy the relevant AcquisitionHeader fields to ImageHeader
-                image.head.fromAcqHead(group{centerIdx}.head);
-
-                % field_of_view is mandatory
-                image.head.field_of_view  = single([metadata.encoding(1).reconSpace.fieldOfView_mm.x ...
-                                                    metadata.encoding(1).reconSpace.fieldOfView_mm.y ...
-                                                    metadata.encoding(1).reconSpace.fieldOfView_mm.z]);
-
-                % Set ISMRMRD Meta Attributes
-                meta = struct;
-                meta.DataRole               = 'Image';
-                meta.ImageProcessingHistory = 'MATLAB';
-                meta.WindowCenter           = uint16(16384);
-                meta.WindowWidth            = uint16(32768);
-                meta.ImageRowDir            = group{centerIdx}.head.read_dir;
-                meta.ImageColumnDir         = group{centerIdx}.head.phase_dir;
-
-                % set_attribute_string also updates attribute_string_len
-                image = image.set_attribute_string(ismrmrd.Meta.serialize(meta));
-
-                images{end+1} = image;
             end
             logging.info(sprintf('Reconstructed %d images', numel(images)))
         end
