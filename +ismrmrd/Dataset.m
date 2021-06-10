@@ -460,12 +460,12 @@ classdef Dataset
         
             for iField = 1:numel(fields)
                 if ~isstruct(inStruct.(fields{iField}))
+                    sz = size(inStruct.(fields{iField}));
+                    if (~ismatrix(sz))
+                        error('Field ''%s'' has unsupported size [%s]', fields{1}, num2str(sz, ' %d'))
+                    end
+
                     for iMeas = 1:nMeas
-                        sz = size(inStruct.(fields{iField}));
-                        if (~ismatrix(sz))
-                            error('Field ''%s'' has unsupported size [%s]', fields{1}, num2str(sz, ' %d'))
-                        end
-        
                         if (sz(2) == 1)
                             out{iMeas}.(fields{iField}) = inStruct.(fields{iField})(iMeas);
                         else
@@ -476,7 +476,7 @@ classdef Dataset
                     % Not a great generalizable way of doing this, but there's no other
                     % implicit way of determining the class of a sub-struct
                     if isfield(inStruct.(fields{iField}), 'kspace_encode_step_1')
-                        outSub = SplitGroupedHeader(inStruct.(fields{iField}), ismrmrd.EncodingCounters);
+                        outSub = ismrmrd.util.SplitGroupedHeader(inStruct.(fields{iField}), ismrmrd.EncodingCounters);
                         for iMeas = 1:nMeas
                             out{iMeas}.(fields{iField}) = outSub{iMeas};
                         end

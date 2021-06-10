@@ -142,7 +142,11 @@ classdef Meta
                     if (numel(values) == 1)
                         values = values{:};
                     elseif all(cellfun(@(x) isnumeric(x), values))
-                        values = cell2mat(values);
+                        if numel(unique(cellfunc(@(x) class(x), values))) > 1
+                            values = cellfun(@(x) double(x), values);
+                        else
+                            values = cell2mat(values);
+                        end
                     end
         
                     metaStruct.(fields{iField}) = values;
