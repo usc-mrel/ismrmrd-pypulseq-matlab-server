@@ -142,7 +142,7 @@ classdef Meta
                     if (numel(values) == 1)
                         values = values{:};
                     elseif all(cellfun(@(x) isnumeric(x), values))
-                        if numel(unique(cellfunc(@(x) class(x), values))) > 1
+                        if numel(unique(cellfun(@(x) class(x), values, 'UniformOutput', false))) > 1
                             values = cellfun(@(x) double(x), values);
                         else
                             values = cell2mat(values);
