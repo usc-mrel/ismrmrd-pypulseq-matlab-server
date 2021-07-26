@@ -48,5 +48,16 @@ classdef EncodingCounters
         function obj = set_repetition(            obj, val),  if obj.ValidateSize(val, [1  1], 'repetition'),             obj.repetition             = uint16(val); end,  end
         function obj = set_set(                   obj, val),  if obj.ValidateSize(val, [1  1], 'set'),                    obj.set                    = uint16(val); end,  end
         function obj = set_user(                  obj, val),  if obj.ValidateSize(val, [1  8], 'user'),                   obj.user                   = uint16(val); end,  end
+
+        % Convert to basic struct
+        % This is used by built-in HDF5 functions.  Overloaded from the built-in
+        % struct(obj) function to avoid warnings, but may be modified in the future
+        function s = struct(obj)
+            publicProperties = properties(obj);
+            s = struct();
+            for fi = 1:numel(publicProperties)
+                s.(publicProperties{fi}) = obj.(publicProperties{fi}); 
+            end
+        end
     end
 end

@@ -283,5 +283,22 @@ classdef AcquisitionHeader
             flagnames = fieldnames(obj.FLAGS);
             cFlags = flagnames(cellfun(@(x) logical(obj.flagIsSet(x)), flagnames));
         end
+
+        % Convert to basic struct
+        % This is used by built-in HDF5 functions.  Overloaded from the built-in
+        % struct(obj) function to avoid warnings, but may be modified in the future
+        function s = struct(obj)
+            publicProperties = properties(obj);
+            s = struct();
+            for fi = 1:numel(publicProperties)
+                if strcmp(publicProperties{fi}, 'FLAGS')
+                    continue
+                end
+                s.(publicProperties{fi}) = obj.(publicProperties{fi});
+            end
+
+            % Explicit handling of idx (EncodingCounters)
+            s.idx = struct(s.idx);
+        end
     end
 end

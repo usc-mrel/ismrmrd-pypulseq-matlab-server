@@ -313,5 +313,16 @@ classdef ImageHeader
         function obj = flagClearAll(obj)
             obj.flags = zeros(1, 1,'uint64');
         end
+
+        % Convert to basic struct
+        % This is used by built-in HDF5 functions.  Overloaded from the built-in
+        % struct(obj) function to avoid warnings, but may be modified in the future
+        function s = struct(obj)
+            publicProperties = properties(obj);
+            s = struct();
+            for fi = 1:numel(publicProperties)
+                s.(publicProperties{fi}) = obj.(publicProperties{fi}); 
+            end
+        end
     end % methods
 end
