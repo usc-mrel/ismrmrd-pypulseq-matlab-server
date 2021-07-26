@@ -1,4 +1,4 @@
-classdef WaveformHeader < handle
+classdef WaveformHeader
     % Class for the MRD WaveformHeader data structure as described in:
     % https://ismrmrd.github.io/apidocs/1.4.2/struct_i_s_m_r_m_r_d_1_1_i_s_m_r_m_r_d___waveform_header.html
     %

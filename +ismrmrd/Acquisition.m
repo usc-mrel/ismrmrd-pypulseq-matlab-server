@@ -19,8 +19,8 @@ classdef Acquisition
 
     properties
         head = ismrmrd.AcquisitionHeader;
-        traj = [];
-        data = [];
+        traj = single([]);
+        data = single([]);
     end
 
     methods
@@ -46,7 +46,7 @@ classdef Acquisition
                     obj.head = arg1;
 
                     if isempty(traj)
-                        obj.traj = [];
+                        obj.traj = single([]);
                     else
                         dims = [obj.head.trajectory_dimensions obj.head.number_of_samples];
                         if (prod(dims) ~= numel(traj))
