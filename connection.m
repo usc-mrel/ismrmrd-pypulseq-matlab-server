@@ -213,7 +213,7 @@ classdef connection < handle
 
             data_bytes = read(obj, uint64(header.number_of_samples) * uint64(header.active_channels) * 8);
             data = typecast(data_bytes,'single');
-            data = data(1:2:end) + 1j*data(2:2:end);
+            data = complex(data(1:2:end), data(2:2:end));
 
             out = ismrmrd.Acquisition(header, traj, data);
         end

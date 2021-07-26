@@ -107,10 +107,10 @@ classdef Image
                     obj.data = reshape(typecast(data_bytes, 'double'),   obj.head.matrix_size(1), obj.head.matrix_size(2), obj.head.matrix_size(3), obj.head.channels);
                 case 'CXFLOAT'
                     dataCplx = typecast(data_bytes, 'single');
-                    obj.data = reshape(dataCplx(1:2:end) + 1j*dataCplx(2:2:end), obj.head.matrix_size(1), obj.head.matrix_size(2), obj.head.matrix_size(3), obj.head.channels);
+                    obj.data = reshape(complex(dataCplx(1:2:end), dataCplx(2:2:end)), obj.head.matrix_size(1), obj.head.matrix_size(2), obj.head.matrix_size(3), obj.head.channels);
                 case 'CXDOUBLE'
                     dataCplx = typecast(data_bytes, 'double');
-                    obj.data = reshape(dataCplx(1:2:end) + 1j*dataCplx(2:2:end), obj.head.matrix_size(1), obj.head.matrix_size(2), obj.head.matrix_size(3), obj.head.channels);
+                    obj.data = reshape(complex(dataCplx(1:2:end), dataCplx(2:2:end)), obj.head.matrix_size(1), obj.head.matrix_size(2), obj.head.matrix_size(3), obj.head.channels);
                 otherwise
                     error('Unsupported data type %s', ismrmrd.ImageHeader.getMrdDatatypeName(obj.head.data_type))
             end

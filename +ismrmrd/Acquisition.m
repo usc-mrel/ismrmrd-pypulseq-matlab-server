@@ -59,7 +59,7 @@ classdef Acquisition
                         obj.data = [];
                     else
                         if isreal(data)
-                            data = data(1:2:end) + 1j*data(2:2:end);
+                            data = complex(data(1:2:end), data(2:2:end));
                         end
                         dims = [obj.head.number_of_samples obj.head.active_channels];
                         if (prod(dims) ~= numel(data))
