@@ -202,8 +202,11 @@ classdef Dataset
             % TODO: Check the type of the input
             
             % The number of acquisitions that we are going to append
-            N = acq.getNumber();
-            
+            if ~iscell(acq)
+                acq = {acq};
+            end
+            N = numel(acq);
+
             % Check if the Data exists
             %   if it does not exist, create it
             %   if it does exist increase it's size
@@ -258,10 +261,10 @@ classdef Dataset
             
             % Pack the acquisition into the correct struct for writing
             d = struct();
-            d.head = acq.head.toStruct();
-            d.traj = acq.trajToFloat();
-            d.data = acq.dataToFloat();
-            
+            d.head = ismrmrd.Dataset.CombineHDF5Header(cellfun(@(x) x.head, acq, 'UniformOutput', false));
+            d.traj = cellfun(@(x) x.traj,            acq, 'UniformOutput', false);
+            d.data = cellfun(@(x) x.serializeData(), acq, 'UniformOutput', false);
+
             % Write
             H5D.write(data_id, obj.htypes.T_Acquisition, ...
                       mem_space_id, file_space_id, 'H5P_DEFAULT', d);
@@ -333,7 +336,11 @@ classdef Dataset
                          mem_space, space, 'H5P_DEFAULT');
                      
             % Pack'em
-            block = ismrmrd.Waveform(d.head, d.data);
+            head = ismrmrd.Dataset.SplitHDF5Header(d.head, ismrmrd.WaveformHeader);
+            block = cell(1, numel(head));
+            for i = 1:numel(block)
+                block{i} = ismrmrd.Waveform(head{i}, d.data{i});
+            end
 
             % Clean up
             H5S.close(mem_space);
@@ -347,8 +354,11 @@ classdef Dataset
             % TODO: Check the type of the input
             
             % The number of acquisitions that we are going to append
-            N = wav.getNumber();
-            
+            if ~iscell(wav)
+                wav = {wav};
+            end
+            N = numel(wav);
+
             % Check if the Data exists
             %   if it does not exist, create it
             %   if it does exist increase it's size
@@ -403,10 +413,9 @@ classdef Dataset
             
             % Pack the acquisition into the correct struct for writing
             d = struct();
-            d.head = wav.head.toStruct();
-            d.data = cellfun(@uint32,wav.data,'UniformOutput',false);
-            
-            
+            d.head = ismrmrd.Dataset.CombineHDF5Header(cellfun(@(x) x.head, wav, 'UniformOutput', false));
+            d.data = cellfun(@(x) x.data, wav, 'UniformOutput', false);
+
             % Write
             H5D.write(data_id, obj.htypes.T_Waveform, ...
                       mem_space_id, file_space_id, 'H5P_DEFAULT', d);
@@ -416,8 +425,7 @@ classdef Dataset
             H5S.close(file_space_id);
             H5D.close(data_id);
         end
-        
-        
+
         function delete(obj)
             H5F.close(obj.fid);
         end
@@ -481,6 +489,33 @@ classdef Dataset
                             out{iMeas}.(fields{iField}) = outSub{iMeas};
                         end
                     end
+                end
+            end
+        end
+
+        function out = CombineHDF5Header(inCell)
+            % Combine a cell array of structs into an HDF5 formatted multi-header
+            %
+            % In the MATLAB representation, a set of raw data/images/waveforms is stored
+            % as a cell array of structs.  When writing to HDF5 files, the headers for
+            % these objects must be converted into a single struct that contains all
+            % measurements, e.g.:
+            %                    version: [4912×1 uint16]
+            %      physiology_time_stamp: [3×4912 uint32]
+            %                        idx: [1×1 struct]
+
+            out = struct(inCell{1});
+            fields = fieldnames(out);
+
+            for iField = 1:numel(fields)
+                if ~isstruct(out.(fields{iField}))
+                    if (numel(inCell{1}.(fields{iField})) == 1)
+                        out.(fields{iField}) = cellfun(@(x) x.(fields{iField}), inCell)';
+                    else
+                        out.(fields{iField}) = cell2mat(cellfun(@(x) x.(fields{iField}), inCell, 'UniformOutput', false)')';
+                    end
+                else
+                    out.(fields{iField}) = ismrmrd.Dataset.CombineHDF5Header(cellfun(@(x) x.(fields{iField}), inCell, 'UniformOutput', false));
                 end
             end
         end
