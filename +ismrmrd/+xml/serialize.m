@@ -50,7 +50,7 @@ if isfield(header,'measurementInformation')
     
     if isfield(measurementInformation, 'measurementDependency')
         measurementDependency = measurementInformation.measurementDependency;
-        for dep = measurementDependency(:)
+        for dep = measurementDependency(:)'
             node = docNode.createElement('measurementDependency');
             append_node(docNode,node,dep,'dependencyType');
             append_node(docNode,node,dep,'measurementID');
@@ -67,6 +67,7 @@ if isfield(header,'measurementInformation')
         for ref = referencedImageSequence(:)
             append_node(docNode,referencedImageSequenceNode,ref,'referencedSOPInstanceUID');
         end
+        measurementInformationNode.appendChild(referencedImageSequenceNode)
     end
     
     docRootNode.appendChild(measurementInformationNode);
@@ -93,6 +94,7 @@ if isfield(header,'acquisitionSystemInformation')
 
     append_optional(docNode,acquisitionSystemInformationNode,acquisitionSystemInformation,'institutionName');
     append_optional(docNode,acquisitionSystemInformationNode,acquisitionSystemInformation,'stationName',@num2str);
+    append_optional(docNode,acquisitionSystemInformationNode,acquisitionSystemInformation,'deviceID',@num2str);
     docRootNode.appendChild(acquisitionSystemInformationNode);
 end
 
@@ -105,7 +107,7 @@ if ~isfield(header,'encoding')
     error('Illegal header: missing encoding section');
 end
 
-for enc = header.encoding(:)
+for enc = header.encoding(:)'
     node = docNode.createElement('encoding');
     
     append_encoding_space(docNode,node,'encodedSpace',enc.encodedSpace);
@@ -126,8 +128,7 @@ for enc = header.encoding(:)
     node.appendChild(n2);
 
     append_node(docNode,node,enc,'trajectory');
-    node.appendChild(n2);
-    
+
     % sometimes the encoding has the fields, but they are empty
     if isfield(enc,'trajectoryDescription')
         if ~isempty(fieldnames(enc.trajectoryDescription))
@@ -150,7 +151,7 @@ for enc = header.encoding(:)
             append_node(docNode,n3,parallelImaging.accelerationFactor,'kspace_encoding_step_2',@int2str);
             n2.appendChild(n3);
 
-            append_optional(docNode,n2,parallelImaging,'calibrationMode'); 
+            append_optional(docNode,n2,parallelImaging,'calibrationMode');
             append_optional(docNode,n2,parallelImaging,'interleavingDimension',@int2str); 
 
             node.appendChild(n2);
@@ -175,7 +176,7 @@ if isfield(header,'sequenceParameters')
     append_optional(docNode,n1,sequenceParameters,'TE',@num2str);
     append_optional(docNode,n1,sequenceParameters,'TI',@num2str);
     append_optional(docNode,n1,sequenceParameters,'flipAngle_deg',@num2str);
-    append_optional(docNode,n1,sequenceParameters,'sequence_type');
+    append_optional(docNode,n1,sequenceParameters,'sequence_type',@char);
     append_optional(docNode,n1,sequenceParameters,'echo_spacing',@num2str);
     docRootNode.appendChild(n1);
 end
@@ -192,10 +193,10 @@ if isfield(header,'userParameters')
         append_user_parameter(docNode,n1,userParameters,'userParameterDouble',@num2str);
     end
     if isfield(userParameters,'userParameterString')
-        append_user_parameter(docNode,n1,userParameters,'userParameterString');
+        append_user_parameter(docNode,n1,userParameters,'userParameterString',@char);
     end
     if isfield(userParameters,'userParameterBase64')
-        append_user_parameter(docNode,n1,userParameters,'userParameterBase64');
+        append_user_parameter(docNode,n1,userParameters,'userParameterBase64',@char);
     end
     
     docRootNode.appendChild(n1);
@@ -220,10 +221,10 @@ if isfield(header,'waveformInformation')
             append_user_parameter(docNode,n2,userParameters,'userParameterDouble',@num2str);
         end
         if isfield(userParameters,'userParameterString')
-            append_user_parameter(docNode,n2,userParameters,'userParameterString');
+            append_user_parameter(docNode,n2,userParameters,'userParameterString',@char);
         end
         if isfield(userParameters,'userParameterBase64')
-            append_user_parameter(docNode,n2,userParameters,'userParameterBase64');
+            append_user_parameter(docNode,n2,userParameters,'userParameterBase64',@char);
         end
     end 
 end 
@@ -295,7 +296,10 @@ function append_optional(docNode,subnode,subheader,name,tostr)
 end
 
 function append_node(docNode,subnode,subheader,name,tostr)
-    
+    if ~exist('tostr', 'var')
+        tostr = @char;
+    end
+
     if ischar(subheader.(name))
         n1 = docNode.createElement(name);    
         n1.appendChild...
@@ -306,8 +310,11 @@ function append_node(docNode,subnode,subheader,name,tostr)
         val = subheader.(name)(:);
         for thisval = 1:length(val)
             n1 = docNode.createElement(name);
-            n1.appendChild...
-                (docNode.createTextNode(tostr(val(thisval))));        
+            if iscell(val)
+               n1.appendChild(docNode.createTextNode(tostr(val{thisval})));
+            else
+               n1.appendChild(docNode.createTextNode(tostr(val(thisval))));
+            end
             subnode.appendChild(n1);
         end
     end
