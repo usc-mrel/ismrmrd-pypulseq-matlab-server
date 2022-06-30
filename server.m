@@ -1,16 +1,25 @@
 classdef server < handle
 
     properties
-        port      = [];
-        tcpHandle = [];
-        log       = [];
+        port           = [];
+        tcpHandle      = [];
+        log            = [];
+        savedata       = false;
+        savedataFolder = '';
     end
 
     methods
-        function obj = server(port,log)
-            log.info('Initializing server on port %d', port);
-            obj.port = port;
-            obj.log = log;
+        function obj = server(port, log, savedata, savedataFolder)
+            log.info('Starting server and listening for data at %s:%d', '0.0.0.0', port);
+
+            if (savedata)
+                log.info("Saving incoming data is enabled.")
+            end
+
+            obj.port           = port;
+            obj.log            = log;
+            obj.savedata       = savedata;
+            obj.savedataFolder = savedataFolder;
         end
 
         function serve(obj)
@@ -44,7 +53,7 @@ classdef server < handle
 
         function handle(obj)
             try
-                conn = connection(obj.tcpHandle, obj.log);
+                conn = connection(obj.tcpHandle, obj.log, obj.savedata, '', obj.savedataFolder);
                 config = next(conn);
                 metadata = next(conn);
 
@@ -68,6 +77,21 @@ classdef server < handle
                 elseif strcmpi(config, "mapvbvd")
                     obj.log.info("Starting mapvbvd processing based on config")
                     recon = fire_mapVBVD;
+                elseif strcmpi(config, "savedataonly")
+                    % Dummy loop with no processing
+                    try
+                        while true
+                            item = next(conn);
+                            if isempty(item)
+                                break;
+                            end
+                        end
+                        conn.send_close();
+                    catch
+                        conn.send_close();
+                    end
+                    % Dummy function for below as we already processed the data
+                    recon = @(conn, config, meta, log) (true);
                 else
                     if exist(config, 'class')
                         obj.log.info("Starting %s processing based on config", config)
@@ -82,6 +106,45 @@ classdef server < handle
             catch ME
                 obj.log.error('[%s:%d] %s', ME.stack(2).name, ME.stack(2).line, ME.message);
                 rethrow(ME);
+            end
+
+            if (conn.savedata)
+                % Dataset may not be closed properly if a close message is not received
+                if (~isempty(conn.dset) && H5I.is_valid(conn.dset.fid))
+                    conn.dset.close()
+                end
+
+                if (isempty(conn.savedataFile) && exist(conn.mrdFilePath, 'file'))
+                    try
+                        % Rename the saved file to use the protocol name
+                        info = h5info(conn.mrdFilePath);
+                        
+                        % Check if the group exists
+                        indGroup = find(strcmp(arrayfun(@(x) x.Name, info.Groups, 'UniformOutput', false), strcat('/', conn.savedataGroup)), 1);
+                        
+                        % Check if xml exists
+                        xmlExists = any(strcmp(arrayfun(@(x) x.Name, info.Groups(indGroup).Datasets, 'UniformOutput', false), 'xml'));
+
+                        if (xmlExists)
+                            dset = ismrmrd.Dataset(conn.mrdFilePath, conn.savedataGroup);
+                            xml  = dset.readxml();
+                            dset.close();
+                            mrdHead = ismrmrd.xml.deserialize(xml);
+                            
+                            if ~isempty(mrdHead.measurementInformation.protocolName)
+                                newFilePath = strrep(conn.mrdFilePath, 'MRD_input_', strcat(mrdHead.measurementInformation.protocolName, '_'));
+                                movefile(conn.mrdFilePath, newFilePath);
+                                conn.mrdFilePath = newFilePath;
+                            end
+                        end
+                    catch
+                        obj.log.error('Failed to rename saved file %s', conn.mrdFilePath);
+                    end
+                end
+
+                if ~isempty(conn.mrdFilePath)
+                    obj.log.info("Incoming data was saved at %s", conn.mrdFilePath)
+                end
             end
         end
 

@@ -2,15 +2,60 @@ classdef connection < handle
     properties
         tcpHandle
         log
+        savedata
+        savedataFile
+        savedataFolder
+        savedataGroup
+        mrdFilePath
+        dset
     end
 
     methods
         % ----------------------------------------------------------------------
         %      TCP/IP connection handling functions
         % ----------------------------------------------------------------------
-        function obj = connection(tcpHandle, log)
-            obj.tcpHandle = tcpHandle;
-            obj.log       = log;
+        function obj = connection(tcpHandle, log, savedata, savedataFile, savedataFolder, savedataGroup)
+            if (nargin < 3)
+                savedata = false;
+            end
+            if (nargin < 4)
+                savedataFile = '';
+            end
+
+            if (nargin < 5)
+                savedataFolder = '';
+            end
+
+            if (nargin < 6)
+                savedataGroup = 'dataset';
+            end
+
+            obj.tcpHandle      = tcpHandle;
+            obj.log            = log;
+            obj.savedata       = savedata;
+            obj.savedataFile   = savedataFile;
+            obj.savedataFolder = savedataFolder;
+            obj.savedataGroup  = savedataGroup;
+        end
+
+        function create_save_file(obj)
+            if (obj.savedata)
+                % Create savedata folder, if necessary
+                if ~isempty(obj.savedataFolder) && ~exist(obj.savedataFolder, 'dir')
+                    mkdir(obj.savedataFolder)
+                    obj.log.info("Created folder %s to save incoming data", obj.savedataFolder)
+                end
+
+                if (~isempty(obj.savedataFile))
+                    obj.mrdFilePath = obj.savedataFile;
+                else
+                    obj.mrdFilePath = fullfile(obj.savedataFolder, strcat('MRD_input_', datestr(now,'yyyy-mm-dd-HHMMSS'), '_', num2str(randi(100)), '.h5'));
+                end
+
+                % Create HDF5 file to store incoming MRD data
+                obj.log.info("Incoming data will be saved to: '%s' in group '%s'", obj.mrdFilePath, obj.savedataGroup)
+                obj.dset = ismrmrd.Dataset(obj.mrdFilePath, obj.savedataGroup);
+            end
         end
 
         function out = read(obj,length)
@@ -83,6 +128,24 @@ classdef connection < handle
             obj.log.info("<-- Received MRD_MESSAGE_CONFIG_FILE (1)")
             config_file_bytes = read(obj,constants.SIZEOF_MRD_MESSAGE_CONFIGURATION_FILE);
             config_file = strtok(char(config_file_bytes)', char(0));
+
+            if strcmpi(config_file, "savedataonly")
+                obj.log.info("Save data, but no processing based on config")
+                if (obj.savedata)
+                    obj.log.debug("Saving data is already enabled")
+                else
+                    obj.savedata = true;
+                    obj.create_save_file();
+                end
+            end
+
+            if (obj.savedata)
+                if isempty(obj.dset)
+                    obj.create_save_file()
+                end
+                obj.log.debug("    Saving config_file to file")
+                obj.dset.writetext(config_file, strcat(obj.dset.grouppath, '/', 'config_file'));
+            end
         end
 
         % ----- MRD_MESSAGE_CONFIG_TEXT (2) ------------------------------------
@@ -110,6 +173,14 @@ classdef connection < handle
             length = typecast(read(obj,constants.SIZEOF_MRD_MESSAGE_LENGTH), 'uint32');
             config_text_bytes = read(obj, length);
             config_text = strtok(char(config_text_bytes)', char(0));
+
+            if (obj.savedata)
+                if isempty(obj.dset)
+                    obj.create_save_file()
+                end
+                obj.log.debug("    Saving config to file")
+                obj.dset.writetext(config_text, strcat(obj.dset.grouppath, '/', 'config'));
+            end
         end
 
         % ----- MRD_MESSAGE_METADATA_XML_TEXT (3) ------------------------------
@@ -138,6 +209,15 @@ classdef connection < handle
             length = typecast(read(obj,constants.SIZEOF_MRD_MESSAGE_LENGTH), 'uint32');
             metadata_bytes = read(obj, length);
             metadata = strtok(char(metadata_bytes)', char(0));
+
+            if (obj.savedata)
+                if isempty(obj.dset)
+                    obj.create_save_file()
+                end
+                obj.log.debug("    Saving XML header to file")
+                obj.dset.writexml(metadata);
+            end
+
         end
 
         % ----- MRD_MESSAGE_CLOSE (4) ------------------------------------------
@@ -153,6 +233,15 @@ classdef connection < handle
         function out = read_close(obj)
             obj.log.info("<-- Received MRD_MESSAGE_CLOSE (4)")
             out = [];
+
+            if (obj.savedata)
+                if isempty(obj.dset)
+                    obj.create_save_file()
+                end
+                obj.log.debug("    Closing file %s", obj.mrdFilePath)
+                obj.dset.close();
+                obj.dset = [];
+            end
         end
 
         % ----- MRD_MESSAGE_TEXT (5) -------------------------------------------
@@ -216,6 +305,13 @@ classdef connection < handle
             data = complex(data(1:2:end), data(2:2:end));
 
             out = ismrmrd.Acquisition(header, traj, data);
+
+            if (obj.savedata)
+                if isempty(obj.dset)
+                    obj.create_save_file()
+                end
+                obj.dset.appendAcquisition(out);
+            end
         end
 
         % ----- MRD_MESSAGE_ISMRMRD_IMAGE (1022) -------------------------------
@@ -265,6 +361,13 @@ classdef connection < handle
             image = ismrmrd.Image(header);
             image.attribute_string = attribs;
             image = image.deserializeImageData(data_bytes);
+
+            if (obj.savedata)
+                if isempty(obj.dset)
+                    obj.create_save_file()
+                end
+                obj.dset.appendImage(sprintf('images_%d', image.image_series_index), out);
+            end
         end
 
         % ----- MRD_MESSAGE_ISMRMRD_WAVEFORM (1026) ----------------------------
@@ -300,6 +403,13 @@ classdef connection < handle
             data_bytes = read(obj, nbytes);
 
             waveform = ismrmrd.Waveform(header, data_bytes);
+
+            if (obj.savedata)
+                if isempty(obj.dset)
+                    obj.create_save_file()
+                end
+                obj.dset.appendWaveform(waveform);
+            end
         end
 
     end
