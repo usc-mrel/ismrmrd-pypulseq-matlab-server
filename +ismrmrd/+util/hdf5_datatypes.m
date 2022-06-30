@@ -16,6 +16,7 @@ classdef hdf5_datatypes
         T_EncodingCounters;
         T_AcquisitionHeader;
         T_Acquisition;
+        T_ImageHeader;
         T_Waveform;
         T_WaveformHeader;
     end
@@ -23,17 +24,18 @@ classdef hdf5_datatypes
     methods
         
         function obj = hdf5_datatypes()
-            obj.T_float = ismrmrd.util.hdf5_datatypes.getType_float();
-            obj.T_double = ismrmrd.util.hdf5_datatypes.getType_double();
-            obj.T_char = ismrmrd.util.hdf5_datatypes.getType_char();
-            obj.T_complexfloat = ismrmrd.util.hdf5_datatypes.getType_complexfloat();
-            obj.T_complexdouble = ismrmrd.util.hdf5_datatypes.getType_complexdouble();
-            obj.T_ushort = ismrmrd.util.hdf5_datatypes.getType_ushort();
-            obj.T_EncodingCounters = ismrmrd.util.hdf5_datatypes.getType_EncodingCounters();
+            obj.T_float             = ismrmrd.util.hdf5_datatypes.getType_float();
+            obj.T_double            = ismrmrd.util.hdf5_datatypes.getType_double();
+            obj.T_char              = ismrmrd.util.hdf5_datatypes.getType_char();
+            obj.T_complexfloat      = ismrmrd.util.hdf5_datatypes.getType_complexfloat();
+            obj.T_complexdouble     = ismrmrd.util.hdf5_datatypes.getType_complexdouble();
+            obj.T_ushort            = ismrmrd.util.hdf5_datatypes.getType_ushort();
+            obj.T_EncodingCounters  = ismrmrd.util.hdf5_datatypes.getType_EncodingCounters();
             obj.T_AcquisitionHeader = ismrmrd.util.hdf5_datatypes.getType_AcquisitionHeader();
-            obj.T_Acquisition = ismrmrd.util.hdf5_datatypes.getType_Acquisition();
-            obj.T_Waveform = ismrmrd.util.hdf5_datatypes.getType_Waveform();
-            obj.T_WaveformHeader = ismrmrd.util.hdf5_datatypes.getType_WaveformHeader();
+            obj.T_Acquisition       = ismrmrd.util.hdf5_datatypes.getType_Acquisition();
+            obj.T_ImageHeader       = ismrmrd.util.hdf5_datatypes.getType_ImageHeader();
+            obj.T_Waveform          = ismrmrd.util.hdf5_datatypes.getType_Waveform();
+            obj.T_WaveformHeader    = ismrmrd.util.hdf5_datatypes.getType_WaveformHeader();
         end
         
     end
@@ -71,78 +73,104 @@ classdef hdf5_datatypes
         end
 
         function b = getType_EncodingCounters()
-
             b = H5T.create ('H5T_COMPOUND', 34);
             H5T.insert(b, 'kspace_encode_step_1', 0, 'H5T_NATIVE_UINT16');
             H5T.insert(b, 'kspace_encode_step_2', 2, 'H5T_NATIVE_UINT16');
-            H5T.insert(b, 'average', 4, 'H5T_NATIVE_UINT16');
-            H5T.insert(b, 'slice', 6, 'H5T_NATIVE_UINT16');
-            H5T.insert(b, 'contrast', 8, 'H5T_NATIVE_UINT16');
-            H5T.insert(b, 'phase', 10, 'H5T_NATIVE_UINT16');
-            H5T.insert(b, 'repetition', 12, 'H5T_NATIVE_UINT16');
-            H5T.insert(b, 'set', 14, 'H5T_NATIVE_UINT16');
-            H5T.insert(b, 'segment', 16, 'H5T_NATIVE_UINT16');
-            H5T.insert(b, 'user', 18, H5T.array_create('H5T_NATIVE_UINT16',[8]));
+            H5T.insert(b, 'average',              4, 'H5T_NATIVE_UINT16');
+            H5T.insert(b, 'slice',                6, 'H5T_NATIVE_UINT16');
+            H5T.insert(b, 'contrast',             8, 'H5T_NATIVE_UINT16');
+            H5T.insert(b, 'phase',               10, 'H5T_NATIVE_UINT16');
+            H5T.insert(b, 'repetition',          12, 'H5T_NATIVE_UINT16');
+            H5T.insert(b, 'set',                 14, 'H5T_NATIVE_UINT16');
+            H5T.insert(b, 'segment',             16, 'H5T_NATIVE_UINT16');
+            H5T.insert(b, 'user',                18, H5T.array_create('H5T_NATIVE_UINT16',[8]));
 
         end
 
         function b = getType_AcquisitionHeader()
             b = H5T.create ('H5T_COMPOUND', 340);
-            H5T.insert(b, 'version', 0, 'H5T_NATIVE_UINT16');
-            H5T.insert(b, 'flags', 2, 'H5T_NATIVE_UINT64');
-            H5T.insert(b, 'measurement_uid', 10, 'H5T_NATIVE_UINT32');
-            H5T.insert(b, 'scan_counter', 14, 'H5T_NATIVE_UINT32');
-            H5T.insert(b, 'acquisition_time_stamp', 18, 'H5T_NATIVE_UINT32');
-            H5T.insert(b, 'physiology_time_stamp', 22, H5T.array_create('H5T_NATIVE_UINT32',[3]));
-            H5T.insert(b, 'number_of_samples', 34, 'H5T_NATIVE_UINT16');
-            H5T.insert(b, 'available_channels', 36, 'H5T_NATIVE_UINT16');
-            H5T.insert(b, 'active_channels', 38, 'H5T_NATIVE_UINT16');
-            H5T.insert(b, 'channel_mask', 40, H5T.array_create('H5T_NATIVE_UINT64',[16]));
-            H5T.insert(b, 'discard_pre', 168, 'H5T_NATIVE_UINT16');
-            H5T.insert(b, 'discard_post', 170, 'H5T_NATIVE_UINT16');
-            H5T.insert(b, 'center_sample', 172, 'H5T_NATIVE_UINT16');
-            H5T.insert(b, 'encoding_space_ref', 174, 'H5T_NATIVE_UINT16');
-            H5T.insert(b, 'trajectory_dimensions', 176, 'H5T_NATIVE_UINT16');
-            H5T.insert(b, 'sample_time_us', 178, 'H5T_NATIVE_FLOAT');
-            H5T.insert(b, 'position', 182, H5T.array_create('H5T_NATIVE_FLOAT',[3]));
-            H5T.insert(b, 'read_dir', 194, H5T.array_create('H5T_NATIVE_FLOAT',[3]));
-            H5T.insert(b, 'phase_dir', 206, H5T.array_create('H5T_NATIVE_FLOAT',[3]));
-            H5T.insert(b, 'slice_dir', 218, H5T.array_create('H5T_NATIVE_FLOAT',[3]));
+            H5T.insert(b, 'version',                  0, 'H5T_NATIVE_UINT16');
+            H5T.insert(b, 'flags',                    2, 'H5T_NATIVE_UINT64');
+            H5T.insert(b, 'measurement_uid',         10, 'H5T_NATIVE_UINT32');
+            H5T.insert(b, 'scan_counter',            14, 'H5T_NATIVE_UINT32');
+            H5T.insert(b, 'acquisition_time_stamp',  18, 'H5T_NATIVE_UINT32');
+            H5T.insert(b, 'physiology_time_stamp',   22, H5T.array_create('H5T_NATIVE_UINT32',[3]));
+            H5T.insert(b, 'number_of_samples',       34, 'H5T_NATIVE_UINT16');
+            H5T.insert(b, 'available_channels',      36, 'H5T_NATIVE_UINT16');
+            H5T.insert(b, 'active_channels',         38, 'H5T_NATIVE_UINT16');
+            H5T.insert(b, 'channel_mask',            40, H5T.array_create('H5T_NATIVE_UINT64',[16]));
+            H5T.insert(b, 'discard_pre',            168, 'H5T_NATIVE_UINT16');
+            H5T.insert(b, 'discard_post',           170, 'H5T_NATIVE_UINT16');
+            H5T.insert(b, 'center_sample',          172, 'H5T_NATIVE_UINT16');
+            H5T.insert(b, 'encoding_space_ref',     174, 'H5T_NATIVE_UINT16');
+            H5T.insert(b, 'trajectory_dimensions',  176, 'H5T_NATIVE_UINT16');
+            H5T.insert(b, 'sample_time_us',         178, 'H5T_NATIVE_FLOAT');
+            H5T.insert(b, 'position',               182, H5T.array_create('H5T_NATIVE_FLOAT',[3]));
+            H5T.insert(b, 'read_dir',               194, H5T.array_create('H5T_NATIVE_FLOAT',[3]));
+            H5T.insert(b, 'phase_dir',              206, H5T.array_create('H5T_NATIVE_FLOAT',[3]));
+            H5T.insert(b, 'slice_dir',              218, H5T.array_create('H5T_NATIVE_FLOAT',[3]));
             H5T.insert(b, 'patient_table_position', 230, H5T.array_create('H5T_NATIVE_FLOAT',[3]));
-            H5T.insert(b, 'idx', 242, ismrmrd.util.hdf5_datatypes.getType_EncodingCounters);
-            H5T.insert(b, 'user_int', 276, H5T.array_create('H5T_NATIVE_INT32',[8]));
-            H5T.insert(b, 'user_float', 308, H5T.array_create('H5T_NATIVE_FLOAT',[8]));
+            H5T.insert(b, 'idx',                    242, ismrmrd.util.hdf5_datatypes.getType_EncodingCounters);
+            H5T.insert(b, 'user_int',               276, H5T.array_create('H5T_NATIVE_INT32',[8]));
+            H5T.insert(b, 'user_float',             308, H5T.array_create('H5T_NATIVE_FLOAT',[8]));
         end
 
         function b = getType_Acquisition()
-
             head = H5T.copy(ismrmrd.util.hdf5_datatypes.getType_AcquisitionHeader());
             traj = H5T.vlen_create(ismrmrd.util.hdf5_datatypes.getType_float());
             data = H5T.vlen_create(ismrmrd.util.hdf5_datatypes.getType_float());
 
             b = H5T.create ('H5T_COMPOUND', 376);
-            H5T.insert(b, 'head', 0, head);
+            H5T.insert(b, 'head',   0, head);
             H5T.insert(b, 'traj', 344, traj);
             H5T.insert(b, 'data', 360, data);
 
         end
 
+        function b = getType_ImageHeader()
+            b = H5T.create ('H5T_COMPOUND', 198);
+            H5T.insert(b, 'version',                  0, 'H5T_NATIVE_UINT16');
+            H5T.insert(b, 'data_type',                2, 'H5T_NATIVE_UINT16');
+            H5T.insert(b, 'flags',                    4, 'H5T_NATIVE_UINT64');
+            H5T.insert(b, 'measurement_uid',         12, 'H5T_NATIVE_UINT32');
+            H5T.insert(b, 'matrix_size',             16, H5T.array_create('H5T_NATIVE_UINT16',[3]));
+            H5T.insert(b, 'field_of_view',           22, H5T.array_create('H5T_NATIVE_FLOAT',[3]));
+            H5T.insert(b, 'channels',                34, 'H5T_NATIVE_UINT16');
+            H5T.insert(b, 'position',                36, H5T.array_create('H5T_NATIVE_FLOAT',[3]));
+            H5T.insert(b, 'read_dir',                48, H5T.array_create('H5T_NATIVE_FLOAT',[3]));
+            H5T.insert(b, 'phase_dir',               60, H5T.array_create('H5T_NATIVE_FLOAT',[3]));
+            H5T.insert(b, 'slice_dir',               72, H5T.array_create('H5T_NATIVE_FLOAT',[3]));
+            H5T.insert(b, 'patient_table_position',  84, H5T.array_create('H5T_NATIVE_FLOAT',[3]));
+            H5T.insert(b, 'average',                 96, 'H5T_NATIVE_UINT16');
+            H5T.insert(b, 'slice',                   98, 'H5T_NATIVE_UINT16');
+            H5T.insert(b, 'contrast',               100, 'H5T_NATIVE_UINT16');
+            H5T.insert(b, 'phase',                  102, 'H5T_NATIVE_UINT16');
+            H5T.insert(b, 'repetition',             104, 'H5T_NATIVE_UINT16');
+            H5T.insert(b, 'set',                    106, 'H5T_NATIVE_UINT16');
+            H5T.insert(b, 'acquisition_time_stamp', 108, 'H5T_NATIVE_UINT32');
+            H5T.insert(b, 'physiology_time_stamp',  112, H5T.array_create('H5T_NATIVE_UINT32',[3]));
+            H5T.insert(b, 'image_type',             124, 'H5T_NATIVE_UINT16');
+            H5T.insert(b, 'image_index',            126, 'H5T_NATIVE_UINT16');
+            H5T.insert(b, 'image_series_index',     128, 'H5T_NATIVE_UINT16');
+            H5T.insert(b, 'user_int',               130, H5T.array_create('H5T_NATIVE_INT32',[8]));
+            H5T.insert(b, 'user_float',             162, H5T.array_create('H5T_NATIVE_FLOAT',[8]));
+            H5T.insert(b, 'attribute_string_len',   194, 'H5T_NATIVE_UINT32');
+        end
 
         function b = getType_WaveformHeader()
             b = H5T.create('H5T_COMPOUND',38);
-            H5T.insert(b, 'version', 0, 'H5T_NATIVE_UINT16');
-            H5T.insert(b, 'flags', 8, 'H5T_NATIVE_UINT64');
-            H5T.insert(b, 'measurement_uid', 16, 'H5T_NATIVE_UINT32');
-            H5T.insert(b, 'scan_counter', 20, 'H5T_NATIVE_UINT32');
-            H5T.insert(b, 'time_stamp', 24, 'H5T_NATIVE_UINT32');
+            H5T.insert(b, 'version',            0, 'H5T_NATIVE_UINT16');
+            H5T.insert(b, 'flags',              8, 'H5T_NATIVE_UINT64');
+            H5T.insert(b, 'measurement_uid',   16, 'H5T_NATIVE_UINT32');
+            H5T.insert(b, 'scan_counter',      20, 'H5T_NATIVE_UINT32');
+            H5T.insert(b, 'time_stamp',        24, 'H5T_NATIVE_UINT32');
             H5T.insert(b, 'number_of_samples', 28, 'H5T_NATIVE_UINT16');
-            H5T.insert(b, 'channels', 30, 'H5T_NATIVE_UINT16');
-            H5T.insert(b, 'sample_time_us', 32, 'H5T_NATIVE_FLOAT');
-            H5T.insert(b, 'waveform_id', 36, 'H5T_NATIVE_UINT16');
+            H5T.insert(b, 'channels',          30, 'H5T_NATIVE_UINT16');
+            H5T.insert(b, 'sample_time_us',    32, 'H5T_NATIVE_FLOAT');
+            H5T.insert(b, 'waveform_id',       36, 'H5T_NATIVE_UINT16');
         end
 
         function b = getType_Waveform()
-
             head = H5T.copy(ismrmrd.util.hdf5_datatypes.getType_WaveformHeader());
             data = H5T.vlen_create(H5T.copy('H5T_NATIVE_UINT32'));
 
@@ -152,7 +180,28 @@ classdef hdf5_datatypes
 
         end
 
-
+        function h5type = getType_FromImageDataType(mrdType)
+            switch mrdType
+                case 1
+                    h5type = H5T.copy('H5T_NATIVE_UINT16');  % USHORT,   i.e. uint16
+                case 2
+                    h5type = H5T.copy('H5T_NATIVE_INT16');   % SHORT,    i.e. int16
+                case 3
+                    h5type = H5T.copy('H5T_NATIVE_UINT32');  % UINT,     i.e. uint32
+                case 4
+                    h5type = H5T.copy('H5T_NATIVE_INT32');   % INT,      i.e. int32
+                case 5
+                    h5type = H5T.copy('H5T_NATIVE_FLOAT');   % FLOAT,    i.e. single
+                case 6
+                    h5type = H5T.copy('H5T_NATIVE_DOUBLE');  % DOUBLE,   i.e. double
+                case 7
+                    h5type = ismrmrd.util.hdf5_datatypes.getType_complexfloat();  % CXFLOAT,  i.e. complex single
+                case 8
+                    h5type = ismrmrd.util.hdf5_datatypes.getType_complexdouble(); % CXDOUBLE, i.e. complex double
+                otherwise
+                    error('Unsupported datatype value: %d', mrdType)
+            end
+        end
 
     end % Methods (Static)
 
