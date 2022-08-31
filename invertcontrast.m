@@ -149,8 +149,8 @@ classdef invertcontrast < handle
 
             % field_of_view is mandatory
             image.head.field_of_view  = single([metadata.encoding(1).reconSpace.fieldOfView_mm.x ...
-                                                 metadata.encoding(1).reconSpace.fieldOfView_mm.y ...
-                                                 metadata.encoding(1).reconSpace.fieldOfView_mm.z]);
+                                                metadata.encoding(1).reconSpace.fieldOfView_mm.y ...
+                                                metadata.encoding(1).reconSpace.fieldOfView_mm.z]);
 
             % Set ISMRMRD Meta Attributes
             meta = struct;
@@ -186,8 +186,10 @@ classdef invertcontrast < handle
                 % Create MRD Image object, set image data and (matrix_size, channels, and data_type) in header
                 image = ismrmrd.Image(data(:,:,iImg));
 
-                % Copy original image header
-                image.head             = group{iImg}.head;
+                % Copy original image header, but keep the new data_type
+                data_type = image.head.data_type;
+                image.head = group{iImg}.head;
+                image.head.data_type = data_type;
 
                 % Add to ImageProcessingHistory
                 meta = ismrmrd.Meta.deserialize(group{iImg}.attribute_string);
