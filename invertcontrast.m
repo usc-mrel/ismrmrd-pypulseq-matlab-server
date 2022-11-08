@@ -145,7 +145,7 @@ classdef invertcontrast < handle
             centerIdx = find(kspace_encode_step_1 == centerLin, 1);
 
             % Copy the relevant AcquisitionHeader fields to ImageHeader
-            image.head.fromAcqHead(group{centerIdx}.head);
+            image.head = image.head.fromAcqHead(group{centerIdx}.head);
 
             % field_of_view is mandatory
             image.head.field_of_view  = single([metadata.encoding(1).reconSpace.fieldOfView_mm.x ...
