@@ -186,10 +186,11 @@ classdef invertcontrast < handle
                 % Create MRD Image object, set image data and (matrix_size, channels, and data_type) in header
                 image = ismrmrd.Image(data(:,:,iImg));
 
-                % Copy original image header, but keep the new data_type
-                data_type = image.head.data_type;
+                % Copy original image header, but keep the new data_type and channels
+                newHead = image.head;
                 image.head = group{iImg}.head;
-                image.head.data_type = data_type;
+                image.head.data_type = newHead.data_type;
+                image.head.channels  = newHead.channels;
 
                 % Add to ImageProcessingHistory
                 meta = ismrmrd.Meta.deserialize(group{iImg}.attribute_string);
