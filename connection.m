@@ -335,7 +335,12 @@ classdef connection < handle
                 write(obj, image{iImg}.head.serialize());
                 write(obj, typecast(uint64(image{iImg}.head.attribute_string_len), 'uint8'));  % This is not a typo -- the value is stored as uint32 in ImageHeader but sent as a uint64 here
                 write(obj, uint8(image{iImg}.attribute_string));
-                write(obj, typecast(reshape(image{iImg}.data,[],1)       , 'uint8'));
+                if isreal(image{iImg}.data)
+                    write(obj, typecast(reshape(image{iImg}.data,[],1)       , 'uint8'));
+                else
+                    % typecast doesn't support complex data -- manually pack as real/imag pairs
+                    write(obj, typecast(reshape([reshape(real(image{iImg}.data), 1, []); reshape(imag(image{iImg}.data), 1, [])], [], 1), 'uint8'));
+                end
             end
         end
 
