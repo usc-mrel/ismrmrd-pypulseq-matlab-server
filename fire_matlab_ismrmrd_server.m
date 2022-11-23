@@ -1,5 +1,5 @@
 function fire_matlab_ismrmrd_server(varargin)
-    addpath('mex');
+    % addpath('mex');
     if(isOctave)
         javaaddpath('/usr/share/java/xercesImpl.jar');
         javaaddpath('/usr/share/java/xml-apis.jar');
