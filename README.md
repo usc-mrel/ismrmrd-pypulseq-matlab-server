@@ -9,7 +9,7 @@ A lightweight ISMRMRD-compatible image reconstruction server written in MATLAB, 
 Begin by cloning the repository
 
 ```
-git clone https://github.com/fyrdahl/fire-matlab-ismrmrd-server.git
+git clone git@github.com:usc-mrel/mrel-talk-matlab-server.git
 ```
 
 The server can either be run as a simple MATLAB-script
@@ -38,3 +38,4 @@ If you are using the matlab-server together with the FIRE WIP, the Application G
 ## Authors
 
 * **Alexander Fyrdahl** (alexander.fyrdahl@gmail.com) - *Initial work* - 
+* **Prakash Kumar** (prakashk@usc.edu) - *Simple modifications for MREL talk* -
