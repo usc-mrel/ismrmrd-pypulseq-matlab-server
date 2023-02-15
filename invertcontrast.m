@@ -129,8 +129,8 @@ classdef invertcontrast < handle
             img = sqrt(sum(abs(img).^2,3));
 
             % Remove phase oversampling
-            img = img(round(size(img,1)/4+1):round(size(img,1)*3/4),:);
-            logging.debug("Image data is size %d x %d after coil combine and phase oversampling removal", size(img))
+            % img = img(round(size(img,1)/4+1):round(size(img,1)*3/4),:);
+            % logging.debug("Image data is size %d x %d after coil combine and phase oversampling removal", size(img))
         
             % Normalize and convert to short (int16)
             img = img .* (32767./max(img(:)));
@@ -187,7 +187,7 @@ classdef invertcontrast < handle
                 image = ismrmrd.Image(data(:,:,iImg));
 
                 % Copy original image header, but keep the new data_type and channels
-                newHead = image.head;
+                 newHead = image.head;
                 image.head = group{iImg}.head;
                 image.head.data_type = newHead.data_type;
                 image.head.channels  = newHead.channels;
