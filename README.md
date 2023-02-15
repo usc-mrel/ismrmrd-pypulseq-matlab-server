@@ -1,5 +1,7 @@
 # FIRE Matlab Server
 
+## **Please use kSpaceKelvin's matlab server for new development, this repo is only for interaction during the talk and will not be maintained.**
+
 A lightweight ISMRMRD-compatible image reconstruction server written in MATLAB, inspired by Kristoffer Knudsen's [Gadgetron Python ISMRMRD Server](https://github.com/kristofferknudsen/gadgetron-python-ismrmrd-server).
 
 ## Getting Started
