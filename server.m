@@ -97,8 +97,8 @@ classdef server < handle
                         obj.log.info("Starting %s processing based on config", config)
                         eval(['recon = ' config ';'])
                     else
-                        obj.log.info("Unknown config '%s'.  Falling back to 'invertcontrast'", config)
-                        recon = invertcontrast;
+                        obj.log.info("Unknown config '%s'.  Falling back to 'simple_nufft'", config)
+                        recon = simple_nufft;
                     end
                 end
                 recon.process(conn, config, metadata, obj.log);
@@ -118,10 +118,10 @@ classdef server < handle
                     try
                         % Rename the saved file to use the protocol name
                         info = h5info(conn.mrdFilePath);
-                        
+
                         % Check if the group exists
                         indGroup = find(strcmp(arrayfun(@(x) x.Name, info.Groups, 'UniformOutput', false), strcat('/', conn.savedataGroup)), 1);
-                        
+
                         % Check if xml exists
                         xmlExists = any(strcmp(arrayfun(@(x) x.Name, info.Groups(indGroup).Datasets, 'UniformOutput', false), 'xml'));
 
@@ -130,7 +130,7 @@ classdef server < handle
                             xml  = dset.readxml();
                             dset.close();
                             mrdHead = ismrmrd.xml.deserialize(xml);
-                            
+
                             if ~isempty(mrdHead.measurementInformation.protocolName)
                                 newFilePath = strrep(conn.mrdFilePath, 'MRD_input_', strcat(mrdHead.measurementInformation.protocolName, '_'));
                                 movefile(conn.mrdFilePath, newFilePath);
