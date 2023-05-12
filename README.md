@@ -34,7 +34,7 @@ If you are using the matlab-server together with the FIRE WIP, the Application G
 
 
 ## Client to send data
-1. It is worth debugging issues using a client with saved MRD data instead of testing everything online. This codebase does not include a client, so there are some options for external clients:
+It is worth debugging issues using a client with saved MRD data instead of testing everything online. This codebase does not include a client, so there are some options for external clients:
 - https://github.com/kspaceKelvin/python-ismrmrd-server instruction number 4.
 - http://gadgetron.github.io/ has a `gadgetron_ismrmrd_client`
 
@@ -43,7 +43,7 @@ If you are using the matlab-server together with the FIRE WIP, the Application G
 
 A simple NUFFT implementation is at `simple_nufft.m` and can be utitlized in the following ways:
 
-1. Modify the config name of the client sending the data. The config name should correspond to a `.mat` file in pulseq_metadata folder which holds the following:
+Modify the config name of the client sending the data. The config name should correspond to a `.mat` file in pulseq_metadata folder which holds the following:
 - 'w': density compensation array [1 x N]
 - 'kx': kx trajectory [1 x (N*Nrep)]
 - 'ky': ky trajectory [1 x (N*Nrep)]
